@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Game.Data;
 
 /// <summary>
 /// 这是所有地图物体的父类。包含DataStructure里的坐标位置，方向，是否阻挡移动，是否可移动的判断
@@ -29,6 +30,7 @@ public class GridObject : MonoBehaviour
 
     public void OnChant(int powerLevel,Direction inputDir)
     {
-        //TODO:被击中
+        //TODO:被击中时的逻辑
+        
     }
 }
