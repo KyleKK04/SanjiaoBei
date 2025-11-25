@@ -106,6 +106,10 @@ namespace Game.EditorTools
                 Event.current.Use();
                 return;
             }
+            else if (key == KeyCode.R)
+            {
+                LoadLevel();
+            }
 
 
             if (shouldMove)
@@ -127,7 +131,7 @@ namespace Game.EditorTools
                 Repaint(); // 刷新箭头显示
                 return;
             }
-            
+
             // 3. 边界检查
             if (targetPos.x < 0 || targetPos.x >= mapWidth || targetPos.y < 0 || targetPos.y >= mapHeight)
             {
@@ -168,7 +172,7 @@ namespace Game.EditorTools
                     Debug.LogWarning("雕像前方是地图边界，无法推动。");
                     return;
                 }
-                
+
                 LevelElement statueNextElement = tempMap[statueNextPos.x, statueNextPos.y];
                 GridObjectType statueNextType = statueNextElement.type;
 
@@ -188,8 +192,8 @@ namespace Game.EditorTools
                 // B. 原雕像位置 (targetPos) 变为地面，等待玩家进入
                 // 注意：这里不需要手动设为 Ground，因为下面 "8. 成功移动" 的逻辑会把玩家移动到这里，
                 // 覆盖掉原本的 Statue 类型。但在逻辑上，它确实变成了空地。
-                targetElement.type = GridObjectType.Ground; 
-                
+                targetElement.type = GridObjectType.Ground;
+
                 Debug.Log("雕像推动成功！");
             }
 
@@ -199,7 +203,8 @@ namespace Game.EditorTools
             if (playerElementRef != null)
             {
                 // 退出旧位置时，如果是出生点，就恢复出生点类型
-                if (spawnElement != null && playerPos.x == spawnElement.position.x && playerPos.y == spawnElement.position.y)
+                if (spawnElement != null && playerPos.x == spawnElement.position.x &&
+                    playerPos.y == spawnElement.position.y)
                 {
                     playerElementRef.type = GridObjectType.SpawnPoint;
                     playerElementRef.initialFacing = spawnElement.initialFacing; // 恢复出生点朝向
@@ -253,16 +258,16 @@ namespace Game.EditorTools
             // TODO: 实现雕像推动和门交互逻辑
             // 交互逻辑：改变周围雕像的朝向
             Debug.Log($"在位置 ({playerPos.x}, {playerPos.y}) 尝试交互 (玩家朝向: {playerFacing})");
-            
+
             bool hasInteracted = false;
 
             // 定义四个方向的偏移量：上、下、左、右
             GridCoordinates[] offsets = new GridCoordinates[]
             {
-                new GridCoordinates(0, 1),  // Up
+                new GridCoordinates(0, 1), // Up
                 new GridCoordinates(0, -1), // Down
                 new GridCoordinates(-1, 0), // Left
-                new GridCoordinates(1, 0)   // Right
+                new GridCoordinates(1, 0) // Right
             };
 
             // 遍历周围四格
@@ -283,14 +288,14 @@ namespace Game.EditorTools
                 {
                     Direction faceToPlayer = Direction.down; // 默认值
 
-                    if (offset.x == 0 && offset.y == 1)       // 雕像在玩家上方
-                        faceToPlayer = Direction.down;        // 雕像应朝下看
+                    if (offset.x == 0 && offset.y == 1) // 雕像在玩家上方
+                        faceToPlayer = Direction.down; // 雕像应朝下看
                     else if (offset.x == 0 && offset.y == -1) // 雕像在玩家下方
-                        faceToPlayer = Direction.up;          // 雕像应朝上看
+                        faceToPlayer = Direction.up; // 雕像应朝上看
                     else if (offset.x == -1 && offset.y == 0) // 雕像在玩家左侧
-                        faceToPlayer = Direction.right;       // 雕像应朝右看
-                    else if (offset.x == 1 && offset.y == 0)  // 雕像在玩家右侧
-                        faceToPlayer = Direction.left;        // 雕像应朝左看
+                        faceToPlayer = Direction.right; // 雕像应朝右看
+                    else if (offset.x == 1 && offset.y == 0) // 雕像在玩家右侧
+                        faceToPlayer = Direction.left; // 雕像应朝左看
                     // 4. 修改雕像朝向与玩家相对
                     if (targetElement.initialFacing != faceToPlayer)
                     {
@@ -313,8 +318,8 @@ namespace Game.EditorTools
             GUILayout.Label("关卡编辑器 (Level Editor)", EditorStyles.boldLabel);
 
             // 1. 顶部栏 (含测试开关)
-            DrawTopToolbar(); 
-    
+            DrawTopToolbar();
+
             // 如果开启了测试模式，优先截获键盘输入
             if (isTestMode)
             {
