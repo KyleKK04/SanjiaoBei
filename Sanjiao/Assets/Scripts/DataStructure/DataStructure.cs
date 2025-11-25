@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Game.Data
 {
     public enum Direction
@@ -8,28 +10,50 @@ namespace Game.Data
         right
     }
 
-//用于存储X，Y坐标，推箱子游戏
+    // 标识格子上的物体类型
+    public enum GridObjectType
+    {
+        None,           // 空/边界（天空，掉下去会死）
+        Ground,         // 普通地面（可行走）
+        Wall,           // 墙
+        Statue,         // 普通雕像
+        GhostStatue,    // 恶鬼雕像
+        Scroll,         // 卷轴
+        Door,           // 大门
+        SpawnPoint      // 玩家出生点
+    }
+
+    [System.Serializable] // 【重要】加上这个，才能在Inspector中显示 XY 输入框
     public struct GridCoordinates
     {
         public int x;
         public int y;
+
+        // 【新增】定义格子像素大小，方便全局调用
+        public const float UnitSize = 80f;
 
         public GridCoordinates(int x, int y)
         {
             this.x = x;
             this.y = y;
         }
-    }
 
-//标识格子上的物体类型（空地、墙壁、普通雕像、恶鬼雕像、卷轴、大门、出生点）。\
-    public enum GridObjectType
-    {
-        ground,
-        wall,
-        statue,
-        ghostStatue,
-        scroll,
-        door,
-        spawnPoint
+        // 重载 + 运算符，方便坐标计算
+        public static GridCoordinates operator +(GridCoordinates a, GridCoordinates b)
+        {
+            return new GridCoordinates(a.x + b.x, a.y + b.y);
+        }
+
+        // 方便转成 Vector3 进行物体摆放，注意这里乘以了 80
+        public Vector3 ToWorldPos()
+        {
+            return new Vector3(x * UnitSize, y * UnitSize, 0);
+        }
+        
+        // 方便转成 Vector2Int (Unity原生整数坐标)
+        public Vector2Int ToVector2Int()
+        {
+            return new Vector2Int(x, y);
+        }
     }
 }

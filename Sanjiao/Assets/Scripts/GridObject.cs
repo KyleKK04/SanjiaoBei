@@ -13,10 +13,18 @@ public class GridObject : MonoBehaviour
     public bool isBlockingMovement = false;
     public bool isMovable = false;
 
-    public GridObject(int x, int y, Direction dir)
+    // 【重要】MonoBehaviour 不能使用构造函数，必须用 Init 或 Awake
+    // 这个方法由 LevelManager 生成物体时调用
+    public virtual void Init(int x, int y, Direction dir)
     {
         gridCoordinates = new GridCoordinates(x, y);
         direction = dir;
+        
+        // 根据坐标设置实际的世界坐标 (乘以80)
+        transform.localPosition = gridCoordinates.ToWorldPos();
+        
+        // 更新视觉朝向 (这里假设后续会有专门处理旋转的代码)
+        UpdateVisualRotation();
     }
     
     public void Interact()
@@ -32,5 +40,19 @@ public class GridObject : MonoBehaviour
     {
         //TODO:被击中时的逻辑
         
+    }
+    
+    // 简单的视觉旋转更新辅助方法
+    protected void UpdateVisualRotation()
+    {
+        float angle = 0;
+        switch (direction)
+        {
+            case Direction.up: angle = 0; break; // 假设图片默认朝上，视具体美术资源而定
+            case Direction.down: angle = 180; break;
+            case Direction.left: angle = 90; break;
+            case Direction.right: angle = -90; break;
+        }
+        transform.localRotation = Quaternion.Euler(0, 0, angle);
     }
 }
