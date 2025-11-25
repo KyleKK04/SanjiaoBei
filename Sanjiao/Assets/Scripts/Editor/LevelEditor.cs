@@ -303,9 +303,7 @@ namespace Game.EditorTools
         {
             string arrow = "";
             // 只有这些物体需要显示方向
-            if (element.type == GridObjectType.Statue ||
-                element.type == GridObjectType.GhostStatue ||
-                element.type == GridObjectType.SpawnPoint)
+            if (element.type == GridObjectType.Statue || element.type == GridObjectType.Player)
             {
                 switch (element.initialFacing)
                 {
@@ -327,6 +325,7 @@ namespace Game.EditorTools
                 case GridObjectType.Scroll: return "Scr";
                 case GridObjectType.Door: return "DR";
                 case GridObjectType.SpawnPoint: return "P " + arrow;
+                case GridObjectType.Player: return "PL" + arrow;
                 default: return "?";
             }
         }

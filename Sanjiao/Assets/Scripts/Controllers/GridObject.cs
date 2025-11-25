@@ -10,6 +10,7 @@ public class GridObject : MonoBehaviour
 {
     public GridCoordinates gridCoordinates;
     public Direction direction;
+    public GridObjectType gridObjectType;
     public bool isBlockingMovement = false;
     public bool isMovable = false;
 
@@ -18,7 +19,6 @@ public class GridObject : MonoBehaviour
     public virtual void Init(int x, int y, Direction dir)
     {
         gridCoordinates = new GridCoordinates(x, y);
-        direction = dir;
         
         // 根据坐标设置实际的世界坐标 (乘以80)
         transform.localPosition = gridCoordinates.ToWorldPos();
@@ -27,7 +27,7 @@ public class GridObject : MonoBehaviour
         UpdateVisualRotation();
     }
     
-    public void Interact()
+    public virtual void Interact()
     {
         //按E键交互
         if (Input.GetKeyDown(KeyCode.E))
@@ -36,23 +36,33 @@ public class GridObject : MonoBehaviour
         }
     }
 
-    public void OnChant(int powerLevel,Direction inputDir)
+    public virtual void OnChant(int powerLevel,Direction inputDir)
     {
         //TODO:被击中时的逻辑
         
+    }
+
+    public Vector2Int DirectionToVector2Int(Direction inputDir)
+    {
+        //将Direction转换为Vector2Int
+        switch (inputDir)
+        {
+            case Direction.up:
+                return new Vector2Int(0, 1);
+            case Direction.down:
+                return new Vector2Int(0, -1);   
+            case Direction.left:
+                return new Vector2Int(-1, 0);
+            case Direction.right:
+                return new Vector2Int(1, 0);
+            default:
+                return Vector2Int.zero;
+        }
     }
     
     // 简单的视觉旋转更新辅助方法
     protected void UpdateVisualRotation()
     {
-        float angle = 0;
-        switch (direction)
-        {
-            case Direction.up: angle = 0; break; // 假设图片默认朝上，视具体美术资源而定
-            case Direction.down: angle = 180; break;
-            case Direction.left: angle = 90; break;
-            case Direction.right: angle = -90; break;
-        }
-        transform.localRotation = Quaternion.Euler(0, 0, angle);
+ 
     }
 }

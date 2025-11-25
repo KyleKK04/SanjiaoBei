@@ -20,7 +20,8 @@ namespace Game.Data
         GhostStatue,    // 恶鬼雕像
         Scroll,         // 卷轴
         Door,           // 大门
-        SpawnPoint      // 玩家出生点
+        SpawnPoint,      // 玩家出生点
+        Player          //玩家
     }
 
     [System.Serializable] // 【重要】加上这个，才能在Inspector中显示 XY 输入框
