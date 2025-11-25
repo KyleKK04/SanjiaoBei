@@ -59,6 +59,32 @@ public class GridObject : MonoBehaviour
                 return Vector2Int.zero;
         }
     }
+
+    public Direction Vector2IntToDirection(Vector2Int input)
+    {
+        if (input.x == 0 && input.y == 1)
+        {
+            return Direction.up;
+        }
+        else if (input.x == 0 && input.y == -1)
+        {
+            return Direction.down;
+        }
+        else if (input.x == -1 && input.y == 0)
+        {
+            return Direction.left;
+        }
+        else if (input.x == 1 && input.y == 0)
+        {
+            return Direction.right;
+        }
+        else
+        {
+            // 确保返回一个合理的默认值，例如向下
+            Debug.LogWarning($"未知的 Vector2Int 方向: {input}，默认为 Direction.down。");
+            return Direction.down; 
+        }
+    }
     
     // 简单的视觉旋转更新辅助方法
     protected void UpdateVisualRotation()

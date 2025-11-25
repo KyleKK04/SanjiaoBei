@@ -45,5 +45,11 @@ namespace Game.Data
             int finalPowerLevel = powerLevel + 1;
             Debug.Log("雕像被击中，向方向 " + finalDir + " 以力量等级 " + finalPowerLevel + " 出声");
         }
+
+        public void OnPush(Direction inputDir)
+        {
+            //推动逻辑:先判断雕像前方的情况，如果是虚空，或有实体（除了ground）则直接return
+            
+        }
     }
 }
