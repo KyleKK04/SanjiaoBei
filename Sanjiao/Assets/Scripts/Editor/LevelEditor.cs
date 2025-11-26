@@ -15,35 +15,36 @@ namespace Game.EditorTools
         private int mapHeight = 10;
         private Vector2 scrollPosition;
 
+        // --- 笔刷设置 ---
+        private int brushDoorPower = 3; // 绘制大门时默认需要的咏唱等级
+
         // --- 测试模式基础变量 ---
         private bool isTestMode = false;
         private GridCoordinates playerPos;
         private Direction playerFacing = Direction.down;
-        
+
         // 引用标记
         private LevelElement spawnElement;
-        private LevelElement playerElementRef;
+        private LevelElement playerElementRef; // 玩家当前占据的格子数据的引用
+
+        // --- 游戏状态标记 (测试模式用) ---
+        private bool hasCollectedScroll = false; // 是否持有卷轴
+        private HashSet<Vector2Int> poweredDoors = new HashSet<Vector2Int>(); // 存储已充能的大门坐标
 
         // --- 咏唱 (Chanting) 相关变量 ---
-        private bool isChanting = false;            // 是否正在按住Q
-        private double lastChantStepTime;           // 上一次咏唱步进的时间点
-        private const double ChantInterval = 0.7;   // 咏唱间隔 (秒)
+        private bool isChanting = false;
+        private double lastChantStepTime;
+        private const double ChantInterval = 0.5; // 加快一点节奏
 
-        // 【新增】定义咏唱节点结构，存储坐标和当前强度
         private struct ChantNode
         {
             public GridCoordinates coord;
             public int power;
         }
 
-        // 【修改】存储咏唱经过的所有节点
-        private List<ChantNode> chantPath = new List<ChantNode>(); 
-        
-        // 当前咏唱波头的行进方向
-        private Direction currentWaveDir; 
-        
-        // 咏唱是否被阻挡/结束
-        private bool isChantBlocked = false; 
+        private List<ChantNode> chantPath = new List<ChantNode>();
+        private Direction currentWaveDir;
+        private bool isChantBlocked = false;
 
         [MenuItem("Game/Level Editor")]
         public static void ShowWindow()
@@ -53,24 +54,105 @@ namespace Game.EditorTools
 
         private void OnInspectorUpdate()
         {
-            // 只有在测试模式下才进行逻辑更新
+            // 测试模式下的实时逻辑更新
             if (isTestMode)
             {
-                // 处理咏唱的时间步进逻辑
+                // 1. 恶鬼雕像威胁检测 (每帧检测)
+                CheckEvilStatueLogic();
+
+                // 2. 咏唱波推进逻辑
                 HandleChantLogic();
-                
-                // 强制重绘，保证动画流畅
+
                 Repaint();
             }
         }
 
-        // --- 核心修改：咏唱逻辑 ---
+        // =========================================================
+        //                 核心逻辑：恶鬼雕像威胁检测
+        // =========================================================
+        private void CheckEvilStatueLogic()
+        {
+            if (tempMap == null) return;
+
+            for (int x = 0; x < mapWidth; x++)
+            {
+                for (int y = 0; y < mapHeight; y++)
+                {
+                    LevelElement el = tempMap[x, y];
+                    if (el.type == GridObjectType.GhostStatue)
+                    {
+                        // 1. 检测周围四格 (曼哈顿距离=1)
+                        if (Mathf.Abs(x - playerPos.x) + Mathf.Abs(y - playerPos.y) == 1)
+                        {
+                            GameOver($"你太靠近恶鬼雕像了！({x},{y})");
+                            return;
+                        }
+
+                        // 2. 检测视线 (射线)
+                        if (IsPlayerInSight(el))
+                        {
+                            GameOver($"被恶鬼雕像发现了！({x},{y})");
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        private bool IsPlayerInSight(LevelElement statue)
+        {
+            GridCoordinates dirVec = DirectionToGridVector(statue.initialFacing);
+            int checkX = statue.position.x;
+            int checkY = statue.position.y;
+
+            while (true)
+            {
+                checkX += dirVec.x;
+                checkY += dirVec.y;
+
+                // 越界检测
+                if (checkX < 0 || checkX >= mapWidth || checkY < 0 || checkY >= mapHeight) break;
+
+                // 玩家检测
+                if (checkX == playerPos.x && checkY == playerPos.y) return true;
+
+                // 阻挡检测
+                LevelElement target = tempMap[checkX, checkY];
+                // 规则：会被普及者雕像阻挡。通常墙壁和大门也会阻挡视线。
+                if (target.type == GridObjectType.Statue ||
+                    target.type == GridObjectType.Wall ||
+                    target.type == GridObjectType.Door ||
+                    target.type == GridObjectType.GhostStatue)
+                {
+                    break;
+                }
+            }
+
+            return false;
+        }
+
+        private void GameOver(string reason)
+        {
+            Debug.LogError("GAME OVER: " + reason);
+            ToggleTestMode(false);
+            EditorUtility.DisplayDialog("失败", reason, "重置");
+            LoadLevel(); // 重新加载以重置地图状态
+        }
+
+        private void WinGame()
+        {
+            Debug.Log("LEVEL CLEAR!");
+            ToggleTestMode(false);
+            EditorUtility.DisplayDialog("通关", "恭喜你打开了大门！", "OK");
+        }
+
+        // =========================================================
+        //                 核心逻辑：咏唱与物体交互
+        // =========================================================
         private void HandleChantLogic()
         {
-            // 如果没有在咏唱，或者咏唱已经被阻挡结束，就不做任何事
             if (!isChanting || isChantBlocked) return;
 
-            // 检查时间间隔 (0.7s)
             double currentTime = EditorApplication.timeSinceStartup;
             if (currentTime - lastChantStepTime >= ChantInterval)
             {
@@ -82,21 +164,13 @@ namespace Game.EditorTools
         private void StartChant()
         {
             if (isChanting) return;
-
             isChanting = true;
             isChantBlocked = false;
             chantPath.Clear();
-            
-            // 咏唱起始点是玩家当前位置，初始强度设为 1
             chantPath.Add(new ChantNode { coord = playerPos, power = 1 });
-            
-            // 初始方向是玩家朝向
             currentWaveDir = playerFacing;
-            
-            // 记录时间
             lastChantStepTime = EditorApplication.timeSinceStartup;
-            
-            Debug.Log(">>> 开始咏唱 (Power: 1)");
+            Debug.Log(">>> 开始咏唱");
         }
 
         private void StopChant()
@@ -104,77 +178,107 @@ namespace Game.EditorTools
             isChanting = false;
             isChantBlocked = false;
             chantPath.Clear();
-            Debug.Log("<<< 停止咏唱");
         }
 
         private void AdvanceChantWave()
         {
-            // 获取当前波头（List中最后一个元素）
             ChantNode currentNode = chantPath[chantPath.Count - 1];
             GridCoordinates currentHeadPos = currentNode.coord;
-            
-            // 默认下一格的强度继承当前强度
+
+            // 默认继承强度
             int nextPower = currentNode.power;
 
-            // 1. 检测当前波头所在的格子
-            // 注意：我们先看当前格子是什么，决定下一格去哪，以及强度是否变化
+            // 1. 当前格子的转向/增强处理
             LevelElement currentElement = tempMap[currentHeadPos.x, currentHeadPos.y];
-            
-            // 如果波头位置是普通雕像
             if (currentElement.type == GridObjectType.Statue)
             {
-                // A. 改变方向：模拟雕像转向逻辑
                 currentWaveDir = currentElement.initialFacing;
-                
-                // B. 增强强度：经过雕像后，后续波的强度 +1
-                nextPower++;
-                
-                Debug.Log($"咏唱波经过雕像 ({currentHeadPos.x},{currentHeadPos.y}) -> 转向: {currentWaveDir}, 强度增强至: {nextPower}");
+                nextPower++; // 普及者雕像增强咏唱
             }
 
-            // 2. 计算下一个格子的坐标
-            GridCoordinates nextPos = CalculateTargetGridPosition(currentHeadPos, currentWaveDir);
+            // 2. 计算下一格位置
+            GridCoordinates nextPos = currentHeadPos + DirectionToGridVector(currentWaveDir);
 
-            // 3. 边界与阻挡检测
-            
-            // A. 地图边界检测
+            // 3. 边界检测
             if (nextPos.x < 0 || nextPos.x >= mapWidth || nextPos.y < 0 || nextPos.y >= mapHeight)
             {
-                Debug.Log("咏唱波到达地图边缘，消散。");
                 isChantBlocked = true;
                 return;
             }
 
-            // B. 障碍物检测
+            // 4. 障碍物与交互检测
             LevelElement nextElement = tempMap[nextPos.x, nextPos.y];
             GridObjectType nextType = nextElement.type;
 
-            // 墙壁阻挡
+            // --- 墙壁 ---
             if (nextType == GridObjectType.Wall)
             {
-                Debug.Log("咏唱波撞墙湮灭。");
                 isChantBlocked = true;
                 return;
             }
-            
-            // 4. 成功延伸，加入新节点
+
+            // --- 恶鬼雕像 (GhostStatue) ---
+            if (nextType == GridObjectType.GhostStatue)
+            {
+                if (nextPower < 3)
+                {
+                    Debug.Log($"咏唱(Lv.{nextPower}) 被恶鬼雕像阻挡。");
+                    isChantBlocked = true;
+                    return;
+                }
+                else
+                {
+                    Debug.Log($"咏唱(Lv.{nextPower}) 摧毁了恶鬼雕像！");
+                    // 摧毁逻辑：将格子变为 Ground
+                    nextElement.type = GridObjectType.Ground;
+                    // 咏唱继续传播，不停止
+                }
+            }
+
+            // --- 终点大门 (Door) ---
+            if (nextType == GridObjectType.Door)
+            {
+                // 【核心修改】增加了 && hasCollectedScroll 判断
+                // 只有在【已拾取卷轴】且【强度足够】时，大门才会被激活
+                if (hasCollectedScroll && nextPower >= nextElement.requiredDoorPower)
+                {
+                    Debug.Log($"大门充能成功！(当前:{nextPower}, 需求:{nextElement.requiredDoorPower})");
+                    // 记录该门已被充能
+                    poweredDoors.Add(new Vector2Int(nextPos.x, nextPos.y));
+                }
+                else
+                {
+                    // 这里没有任何反应，只是打印调试信息
+                    if (!hasCollectedScroll)
+                        Debug.Log($"大门毫无反应：虽然被击中，但你尚未拾取卷轴。");
+                    else
+                        Debug.Log($"大门毫无反应：充能不足 (当前:{nextPower}, 需求:{nextElement.requiredDoorPower})");
+                }
+
+                // 大门视为实体，无论是否激活都会阻挡咏唱继续传播
+                isChantBlocked = true;
+                return;
+            }
+
+            // 5. 成功延伸
             chantPath.Add(new ChantNode { coord = nextPos, power = nextPower });
         }
 
-        // --- 输入处理 ---
+        // =========================================================
+        //                 玩家移动与交互逻辑
+        // =========================================================
         private void HandleTestModeInput()
         {
             if (!isTestMode || Event.current == null) return;
 
-            // 1. 处理咏唱按键 (Q)
-            // KeyDown: 开始咏唱
+            // 咏唱输入 (Q)
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Q)
             {
                 StartChant();
                 Event.current.Use();
                 return;
             }
-            // KeyUp: 停止咏唱
+
             if (Event.current.type == EventType.KeyUp && Event.current.keyCode == KeyCode.Q)
             {
                 StopChant();
@@ -182,20 +286,35 @@ namespace Game.EditorTools
                 return;
             }
 
-            // 如果正在咏唱，禁止移动
             if (isChanting) return;
 
-            // 2. 处理移动按键
+            // 移动与交互
             if (Event.current.type == EventType.KeyDown)
             {
                 KeyCode key = Event.current.keyCode;
                 Direction moveDir = Direction.down;
                 bool shouldMove = false;
 
-                if (key == KeyCode.W) { moveDir = Direction.up; shouldMove = true; }
-                else if (key == KeyCode.S) { moveDir = Direction.down; shouldMove = true; }
-                else if (key == KeyCode.A) { moveDir = Direction.left; shouldMove = true; }
-                else if (key == KeyCode.D) { moveDir = Direction.right; shouldMove = true; }
+                if (key == KeyCode.W)
+                {
+                    moveDir = Direction.up;
+                    shouldMove = true;
+                }
+                else if (key == KeyCode.S)
+                {
+                    moveDir = Direction.down;
+                    shouldMove = true;
+                }
+                else if (key == KeyCode.A)
+                {
+                    moveDir = Direction.left;
+                    shouldMove = true;
+                }
+                else if (key == KeyCode.D)
+                {
+                    moveDir = Direction.right;
+                    shouldMove = true;
+                }
                 else if (key == KeyCode.E)
                 {
                     InteractInTestMode();
@@ -216,46 +335,82 @@ namespace Game.EditorTools
 
         private void TryMoveInTestMode(Direction moveDir)
         {
-            GridCoordinates targetPos = CalculateTargetGridPosition(playerPos, moveDir);
+            GridCoordinates targetPos = playerPos + DirectionToGridVector(moveDir);
 
+            // 转向逻辑
             if (playerFacing != moveDir)
             {
                 playerFacing = moveDir;
+                if (playerElementRef != null)
+                {
+                    playerElementRef.initialFacing = playerFacing;
+                }
+
                 Repaint();
                 return;
             }
 
+            // 边界检查
             if (targetPos.x < 0 || targetPos.x >= mapWidth || targetPos.y < 0 || targetPos.y >= mapHeight) return;
 
             LevelElement targetElement = tempMap[targetPos.x, targetPos.y];
             GridObjectType targetType = targetElement.type;
 
+            // 阻挡物检查
             if (targetType == GridObjectType.Wall) return;
+            if (targetType == GridObjectType.Door) return;
+            if (targetType == GridObjectType.GhostStatue) return;
 
+            // 虚空检查
             if (targetType == GridObjectType.None)
             {
-                Debug.LogError("⚠️ 掉入虚空！玩家死亡！ ⚠️");
-                ToggleTestMode(false); 
-                LoadLevel(); 
+                GameOver("掉入虚空！");
                 return;
             }
 
+            // 推动雕像逻辑
             if (targetType == GridObjectType.Statue)
             {
-                GridCoordinates statueNextPos = CalculateTargetGridPosition(targetPos, moveDir);
-                if (statueNextPos.x < 0 || statueNextPos.x >= mapWidth || statueNextPos.y < 0 || statueNextPos.y >= mapHeight) return;
-
-                LevelElement statueNextElement = tempMap[statueNextPos.x, statueNextPos.y];
-                if (statueNextElement.type != GridObjectType.Ground && statueNextElement.type != GridObjectType.SpawnPoint) return;
-
-                statueNextElement.type = GridObjectType.Statue;
-                statueNextElement.initialFacing = targetElement.initialFacing;
-                targetElement.type = GridObjectType.Ground;
+                GridCoordinates pushPos = targetPos + DirectionToGridVector(moveDir);
+                if (pushPos.x >= 0 && pushPos.x < mapWidth && pushPos.y >= 0 && pushPos.y < mapHeight)
+                {
+                    LevelElement pushTarget = tempMap[pushPos.x, pushPos.y];
+                    if (pushTarget.type == GridObjectType.Ground || pushTarget.type == GridObjectType.SpawnPoint)
+                    {
+                        pushTarget.type = GridObjectType.Statue;
+                        pushTarget.initialFacing = targetElement.initialFacing;
+                        targetElement.type = GridObjectType.Ground;
+                    }
+                    else return;
+                }
+                else return;
             }
 
+            // 移动成功：更新玩家位置
+            // 注意：这一步已经把 targetPos 的格子类型改成了 Player，原本的 Scroll 被覆盖了
+            MovePlayerTo(targetPos);
+
+            // 拾取卷轴逻辑
+            if (targetType == GridObjectType.Scroll)
+            {
+                hasCollectedScroll = true;
+                Debug.Log($"🔔 拾取卷轴！");
+
+                // 【已删除】 tempMap[playerPos.x, playerPos.y].type = GridObjectType.Ground;
+                // 不需要这行了，MovePlayerTo 已经把这里变成了 Player。
+                // 等玩家下次移动离开这里时，还原逻辑会自动把它变成 Ground。
+            }
+
+            Repaint();
+        }
+
+        private void MovePlayerTo(GridCoordinates newPos)
+        {
+            // 恢复原位置的类型 (出生点或地面)
             if (playerElementRef != null)
             {
-                if (spawnElement != null && playerPos.x == spawnElement.position.x && playerPos.y == spawnElement.position.y)
+                if (spawnElement != null && playerPos.x == spawnElement.position.x &&
+                    playerPos.y == spawnElement.position.y)
                 {
                     playerElementRef.type = GridObjectType.SpawnPoint;
                     playerElementRef.initialFacing = spawnElement.initialFacing;
@@ -266,83 +421,93 @@ namespace Game.EditorTools
                 }
             }
 
-            playerPos = targetPos;
+            playerPos = newPos;
             playerElementRef = tempMap[playerPos.x, playerPos.y];
             playerElementRef.type = GridObjectType.Player;
             playerElementRef.initialFacing = playerFacing;
+        }
 
-            if (targetType == GridObjectType.Scroll)
+        private void InteractInTestMode()
+        {
+            // --- 逻辑 1：恢复原本的雕像交互 (周围四格让雕像看向玩家) ---
+            // 定义四周偏移量
+            GridCoordinates[] offsets =
             {
-                Debug.Log($"🔔 拾取卷轴！");
+                new GridCoordinates(0, 1), // 上
+                new GridCoordinates(0, -1), // 下
+                new GridCoordinates(-1, 0), // 左
+                new GridCoordinates(1, 0) // 右
+            };
+
+            foreach (var offset in offsets)
+            {
+                int tx = playerPos.x + offset.x;
+                int ty = playerPos.y + offset.y;
+
+                // 边界检查
+                if (tx >= 0 && tx < mapWidth && ty >= 0 && ty < mapHeight)
+                {
+                    // 如果周围是普通雕像，让它转头面向玩家
+                    if (tempMap[tx, ty].type == GridObjectType.Statue)
+                    {
+                        Direction faceToPlayer = Direction.down;
+                        // offset 是 (雕像 - 玩家)，所以反过来推导雕像应该朝哪看
+                        if (offset.x == 0 && offset.y == 1) faceToPlayer = Direction.down; // 雕像在玩家上方 -> 朝下看
+                        else if (offset.x == 0 && offset.y == -1) faceToPlayer = Direction.up; // 雕像在玩家下方 -> 朝上看
+                        else if (offset.x == -1 && offset.y == 0) faceToPlayer = Direction.right; // 雕像在玩家左侧 -> 朝右看
+                        else if (offset.x == 1 && offset.y == 0) faceToPlayer = Direction.left; // 雕像在玩家右侧 -> 朝左看
+
+                        tempMap[tx, ty].initialFacing = faceToPlayer;
+                        Debug.Log($"雕像 ({tx},{ty}) 转向了玩家");
+                    }
+                }
+            }
+
+            // --- 逻辑 2：大门交互 (针对玩家正前方) ---
+            GridCoordinates frontPos = playerPos + DirectionToGridVector(playerFacing);
+            if (frontPos.x >= 0 && frontPos.x < mapWidth && frontPos.y >= 0 && frontPos.y < mapHeight)
+            {
+                LevelElement frontElement = tempMap[frontPos.x, frontPos.y];
+                if (frontElement.type == GridObjectType.Door)
+                {
+                    bool isPowered = poweredDoors.Contains(new Vector2Int(frontPos.x, frontPos.y));
+                    if (hasCollectedScroll && isPowered)
+                    {
+                        WinGame();
+                    }
+                    else
+                    {
+                        string tips = "无法打开大门：";
+                        if (!hasCollectedScroll) tips += "[未拾取卷轴] ";
+                        if (!isPowered) tips += "[大门未充能] ";
+                        Debug.Log(tips);
+                    }
+                }
             }
 
             Repaint();
         }
 
-        private GridCoordinates CalculateTargetGridPosition(GridCoordinates currentCoord, Direction dir)
-        {
-            int targetX = currentCoord.x;
-            int targetY = currentCoord.y;
-            switch (dir)
-            {
-                case Direction.up: targetY += 1; break;
-                case Direction.down: targetY -= 1; break;
-                case Direction.left: targetX -= 1; break;
-                case Direction.right: targetX += 1; break;
-            }
-            return new GridCoordinates(targetX, targetY);
-        }
-
-        private void InteractInTestMode()
-        {
-             // 简单的交互逻辑：改变周围雕像朝向
-            GridCoordinates[] offsets = { new GridCoordinates(0, 1), new GridCoordinates(0, -1), new GridCoordinates(-1, 0), new GridCoordinates(1, 0) };
-            bool hasInteracted = false;
-            foreach (var offset in offsets)
-            {
-                int tx = playerPos.x + offset.x;
-                int ty = playerPos.y + offset.y;
-                if (tx >= 0 && tx < mapWidth && ty >= 0 && ty < mapHeight)
-                {
-                    if (tempMap[tx, ty].type == GridObjectType.Statue)
-                    {
-                        // 让雕像面向玩家
-                        Direction faceToPlayer = Direction.down;
-                        if (offset.x == 0 && offset.y == 1) faceToPlayer = Direction.down;
-                        else if (offset.x == 0 && offset.y == -1) faceToPlayer = Direction.up;
-                        else if (offset.x == -1 && offset.y == 0) faceToPlayer = Direction.right;
-                        else if (offset.x == 1 && offset.y == 0) faceToPlayer = Direction.left;
-                        
-                        tempMap[tx, ty].initialFacing = faceToPlayer;
-                        hasInteracted = true;
-                    }
-                }
-            }
-            if (hasInteracted) Repaint();
-        }
-
-        // --- GUI 绘制部分 ---
+        // =========================================================
+        //                 GUI 绘制与辅助方法
+        // =========================================================
         private void OnGUI()
         {
             GUILayout.Label("关卡编辑器 (Level Editor)", EditorStyles.boldLabel);
-
             DrawTopToolbar();
 
             if (isTestMode)
             {
-                HandleTestModeInput(); // 优先处理输入
-                
-                // 绘制测试模式下的 HUD
-                string status = isChanting ? $"咏唱中... (长度: {chantPath.Count})" : "等待咏唱";
-                EditorGUILayout.HelpBox($"【测试模式】 WASD移动 Q咏唱 E交互 R重置\n状态: {status}", MessageType.Warning);
+                HandleTestModeInput();
+                string status = $"【测试中】 卷轴: {(hasCollectedScroll ? "YES" : "NO")} | 按Q咏唱 | E交互";
+                EditorGUILayout.HelpBox(status, MessageType.Info);
+            }
+            else
+            {
+                DrawPalette();
             }
 
             if (tempMap == null) return;
-
-            EditorGUILayout.Space();
-
-            if (!isTestMode) DrawPalette();
-
             EditorGUILayout.Space();
             DrawGrid();
         }
@@ -350,37 +515,43 @@ namespace Game.EditorTools
         private void DrawTopToolbar()
         {
             EditorGUILayout.BeginVertical("box");
-            currentLevelData = (LevelSO)EditorGUILayout.ObjectField("Level Data SO", currentLevelData, typeof(LevelSO), false);
+            currentLevelData = (LevelSO)EditorGUILayout.ObjectField("Data", currentLevelData, typeof(LevelSO), false);
+
             EditorGUILayout.BeginHorizontal();
-            mapWidth = EditorGUILayout.IntField("Width", mapWidth);
-            mapHeight = EditorGUILayout.IntField("Height", mapHeight);
-            if (GUILayout.Button("重置/新建地图")) InitializeNewMap();
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("读取数据 (Load)")) LoadLevel();
+            mapWidth = EditorGUILayout.IntField("W", mapWidth);
+            mapHeight = EditorGUILayout.IntField("H", mapHeight);
+            if (GUILayout.Button("New")) InitializeNewMap();
+            if (GUILayout.Button("Load")) LoadLevel();
             GUI.backgroundColor = Color.green;
-            if (GUILayout.Button("保存数据 (Save)")) SaveLevel();
+            if (GUILayout.Button("Save")) SaveLevel();
             GUI.backgroundColor = Color.white;
             EditorGUILayout.EndHorizontal();
-            
-            // 测试模式开关
+
             GUI.backgroundColor = isTestMode ? Color.yellow : Color.white;
-            if (GUILayout.Button(isTestMode ? "退出测试模式" : "进入测试模式")) ToggleTestMode(!isTestMode);
+            if (GUILayout.Button(isTestMode ? "退出测试" : "开始测试")) ToggleTestMode(!isTestMode);
             GUI.backgroundColor = Color.white;
-            
             EditorGUILayout.EndVertical();
         }
 
         private void DrawPalette()
         {
-            EditorGUILayout.LabelField("笔刷选择:", EditorStyles.boldLabel);
-            selectedType = (GridObjectType)EditorGUILayout.EnumPopup("Object Type", selectedType);
-            EditorGUILayout.HelpBox("左键: 放置 | 右键: 旋转", MessageType.Info);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("笔刷:", GUILayout.Width(40));
+            selectedType = (GridObjectType)EditorGUILayout.EnumPopup(selectedType);
+
+            // 如果选中大门，显示所需的等级设置
+            if (selectedType == GridObjectType.Door)
+            {
+                EditorGUILayout.LabelField("需等级:", GUILayout.Width(45));
+                brushDoorPower = EditorGUILayout.IntField(brushDoorPower, GUILayout.Width(30));
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.HelpBox("左键放置/设置 | 右键旋转", MessageType.None);
         }
 
         private void DrawGrid()
         {
-            if (tempMap == null) return;
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
             EditorGUILayout.BeginVertical();
             for (int y = mapHeight - 1; y >= 0; y--)
@@ -391,9 +562,11 @@ namespace Game.EditorTools
                 {
                     DrawCell(x, y);
                 }
+
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
             }
+
             EditorGUILayout.EndVertical();
             EditorGUILayout.EndScrollView();
         }
@@ -401,55 +574,64 @@ namespace Game.EditorTools
         private void DrawCell(int x, int y)
         {
             LevelElement element = tempMap[x, y];
-            if (isTestMode && element.type == GridObjectType.Player)
-                element.initialFacing = playerFacing;
-
-            // 1. 获取基础颜色
             Color cellColor = GetColorByType(element.type);
             string label = GetLabelText(element);
-            
-            // --- 核心修改：咏唱波的可视化与数值显示 ---
-            bool isChantCell = false;
-            int currentPower = 0;
 
+            // --- 特殊状态可视化 ---
+
+            // 1. 咏唱波显示
             if (isTestMode && isChanting)
             {
-                // 遍历查找当前格子是否在咏唱路径中
                 foreach (var node in chantPath)
                 {
                     if (node.coord.x == x && node.coord.y == y)
                     {
-                        isChantCell = true;
-                        currentPower = node.power; // 获取该节点的强度
+                        cellColor = Color.Lerp(cellColor, Color.blue, 0.6f);
+                        label += $"\n{node.power}";
                         break;
                     }
                 }
             }
 
-            if (isChantCell)
+            // 2. 大门状态显示
+            if (element.type == GridObjectType.Door)
             {
-                // 混合颜色：原本颜色 + 蓝色
-                cellColor = Color.Lerp(cellColor, Color.blue, 0.5f);
-                
-                // 【修改】在Label中显示强度
-                // 格式示例： (( S↑ : 2 )) 或 (( : 1 ))
-                if (string.IsNullOrEmpty(label))
-                    label = $"{currentPower} ";
+                bool isPowered = isTestMode && poweredDoors.Contains(new Vector2Int(x, y));
+                if (isPowered)
+                {
+                    cellColor = Color.cyan; // 激活后发光
+                    label += " [ON]";
+                }
                 else
-                    label = $"{label} : {currentPower}";
+                {
+                    label += $"{element.requiredDoorPower}";
+                }
             }
 
             GUI.backgroundColor = cellColor;
-            Rect cellRect = GUILayoutUtility.GetRect(40, 40);
+            Rect cellRect = GUILayoutUtility.GetRect(45, 45);
             GUI.Box(cellRect, label, GUI.skin.button);
 
-            // 点击逻辑 (仅非测试模式)
+            // 编辑操作 (仅非测试模式)
             if (!isTestMode)
             {
                 if (Event.current.type == EventType.MouseDown && cellRect.Contains(Event.current.mousePosition))
                 {
-                    if (Event.current.button == 0) { element.type = selectedType; Event.current.Use(); }
-                    else if (Event.current.button == 1) { RotateElement(element); Event.current.Use(); }
+                    if (Event.current.button == 0)
+                    {
+                        // 放置
+                        element.type = selectedType;
+                        // 如果是门，应用笔刷的等级设置
+                        if (selectedType == GridObjectType.Door) element.requiredDoorPower = brushDoorPower;
+                        Event.current.Use();
+                    }
+                    else if (Event.current.button == 1)
+                    {
+                        // 旋转
+                        element.initialFacing = RotateDirection(element.initialFacing);
+                        Event.current.Use();
+                    }
+
                     Repaint();
                 }
             }
@@ -457,11 +639,33 @@ namespace Game.EditorTools
             GUI.backgroundColor = Color.white;
         }
 
-        // --- 辅助方法 (保持不变) ---
+        // --- 辅助工具方法 ---
+
+        private GridCoordinates DirectionToGridVector(Direction dir)
+        {
+            switch (dir)
+            {
+                case Direction.up: return new GridCoordinates(0, 1);
+                case Direction.down: return new GridCoordinates(0, -1);
+                case Direction.left: return new GridCoordinates(-1, 0);
+                case Direction.right: return new GridCoordinates(1, 0);
+                default: return new GridCoordinates(0, 0);
+            }
+        }
+
+        private Direction RotateDirection(Direction dir)
+        {
+            if (dir == Direction.up) return Direction.right;
+            if (dir == Direction.right) return Direction.down;
+            if (dir == Direction.down) return Direction.left;
+            return Direction.up;
+        }
+
         private void InitializeNewMap()
         {
             tempMap = new LevelElement[mapWidth, mapHeight];
-            for (int x = 0; x < mapWidth; x++) for (int y = 0; y < mapHeight; y++)
+            for (int x = 0; x < mapWidth; x++)
+            for (int y = 0; y < mapHeight; y++)
             {
                 tempMap[x, y] = new LevelElement();
                 tempMap[x, y].position = new GridCoordinates(x, y);
@@ -471,7 +675,7 @@ namespace Game.EditorTools
 
         private void LoadLevel()
         {
-            if (currentLevelData == null) { Debug.LogError("请拖入 LevelSO"); return; }
+            if (currentLevelData == null) return;
             mapWidth = currentLevelData.mapSize.x;
             mapHeight = currentLevelData.mapSize.y;
             InitializeNewMap();
@@ -479,12 +683,14 @@ namespace Game.EditorTools
             {
                 if (el.position.x >= 0 && el.position.x < mapWidth && el.position.y >= 0 && el.position.y < mapHeight)
                 {
-                    tempMap[el.position.x, el.position.y].type = el.type;
-                    tempMap[el.position.x, el.position.y].initialFacing = el.initialFacing;
+                    LevelElement mapEl = tempMap[el.position.x, el.position.y];
+                    mapEl.type = el.type;
+                    mapEl.initialFacing = el.initialFacing;
+                    mapEl.requiredDoorPower = el.requiredDoorPower; // 读取门等级
                 }
             }
-            if (isTestMode) ToggleTestMode(false); // 加载时重置测试模式
-            Debug.Log("加载成功");
+
+            if (isTestMode) ToggleTestMode(false);
         }
 
         private void SaveLevel()
@@ -492,66 +698,58 @@ namespace Game.EditorTools
             if (currentLevelData == null) return;
             currentLevelData.mapSize = new GridCoordinates(mapWidth, mapHeight);
             currentLevelData.elements.Clear();
-            for (int x = 0; x < mapWidth; x++) for (int y = 0; y < mapHeight; y++)
+            for (int x = 0; x < mapWidth; x++)
+            for (int y = 0; y < mapHeight; y++)
             {
                 LevelElement el = tempMap[x, y];
-                LevelElement toSave = new LevelElement { position = new GridCoordinates(x, y), type = el.type, initialFacing = el.initialFacing };
-                currentLevelData.elements.Add(toSave);
+                if (el.type != GridObjectType.Ground && el.type != GridObjectType.None)
+                {
+                    LevelElement toSave = new LevelElement
+                    {
+                        position = new GridCoordinates(x, y),
+                        type = el.type,
+                        initialFacing = el.initialFacing,
+                        requiredDoorPower = el.requiredDoorPower
+                    };
+                    currentLevelData.elements.Add(toSave);
+                }
             }
+
             EditorUtility.SetDirty(currentLevelData);
             AssetDatabase.SaveAssets();
-            Debug.Log("保存成功");
+            Debug.Log("Saved.");
         }
 
         private void ToggleTestMode(bool enable)
         {
             isTestMode = enable;
-            StopChant(); // 切换模式时重置咏唱
-            
+            StopChant();
+            hasCollectedScroll = false;
+            poweredDoors.Clear();
+
             if (isTestMode)
             {
-                spawnElement = FindSpawnPoint();
+                spawnElement = null;
+                // 查找出生点
+                foreach (var el in tempMap)
+                    if (el.type == GridObjectType.SpawnPoint)
+                        spawnElement = el;
+
                 if (spawnElement != null)
                 {
                     playerPos = spawnElement.position;
                     playerFacing = spawnElement.initialFacing;
-                    playerElementRef = tempMap[playerPos.x, playerPos.y];
-                    playerElementRef.type = GridObjectType.Player;
-                    playerElementRef.initialFacing = playerFacing;
+                    MovePlayerTo(playerPos); // 初始化玩家视觉位置
                 }
                 else
                 {
                     isTestMode = false;
-                    Debug.LogError("未找到出生点");
+                    Debug.LogError("地图中没有玩家出生点 (SpawnPoint)！");
                 }
             }
             else
             {
-                if (playerElementRef != null && spawnElement != null)
-                {
-                    playerElementRef.type = spawnElement.type;
-                    playerElementRef.initialFacing = spawnElement.initialFacing;
-                    playerElementRef = null;
-                }
-            }
-            Repaint();
-        }
-
-        private LevelElement FindSpawnPoint()
-        {
-            if (tempMap == null) return null;
-            for (int x = 0; x < mapWidth; x++) for (int y = 0; y < mapHeight; y++) if (tempMap[x, y].type == GridObjectType.SpawnPoint) return tempMap[x, y];
-            return null;
-        }
-
-        private void RotateElement(LevelElement element)
-        {
-            switch (element.initialFacing)
-            {
-                case Direction.up: element.initialFacing = Direction.right; break;
-                case Direction.right: element.initialFacing = Direction.down; break;
-                case Direction.down: element.initialFacing = Direction.left; break;
-                case Direction.left: element.initialFacing = Direction.up; break;
+                LoadLevel(); // 退出时重置地图状态（比如复活恶鬼雕像）
             }
         }
 
@@ -560,13 +758,14 @@ namespace Game.EditorTools
             switch (type)
             {
                 case GridObjectType.None: return Color.black;
-                case GridObjectType.Ground: return Color.gray;
+                case GridObjectType.Ground: return new Color(0.8f, 0.8f, 0.8f);
                 case GridObjectType.Wall: return new Color(0.3f, 0.3f, 0.3f);
                 case GridObjectType.Statue: return Color.cyan;
-                case GridObjectType.GhostStatue: return Color.red;
+                case GridObjectType.GhostStatue: return new Color(0.8f, 0f, 0f); // 深红
                 case GridObjectType.Scroll: return Color.yellow;
-                case GridObjectType.Door: return Color.magenta;
+                case GridObjectType.Door: return new Color(0.5f, 0f, 0.5f); // 紫色
                 case GridObjectType.SpawnPoint: return Color.green;
+                case GridObjectType.Player: return Color.white;
                 default: return Color.white;
             }
         }
@@ -574,7 +773,8 @@ namespace Game.EditorTools
         private string GetLabelText(LevelElement element)
         {
             string arrow = "";
-            if (element.type == GridObjectType.Statue || element.type == GridObjectType.Player || element.type == GridObjectType.GhostStatue || element.type == GridObjectType.SpawnPoint)
+            if (element.type == GridObjectType.Statue || element.type == GridObjectType.Player ||
+                element.type == GridObjectType.GhostStatue || element.type == GridObjectType.SpawnPoint)
             {
                 switch (element.initialFacing)
                 {
@@ -584,6 +784,7 @@ namespace Game.EditorTools
                     case Direction.right: arrow = "→"; break;
                 }
             }
+
             switch (element.type)
             {
                 case GridObjectType.None: return "X";

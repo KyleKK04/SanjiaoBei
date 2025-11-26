@@ -1,55 +1,45 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using Game.Data;
+using Game.Core;
 
 namespace Game.Data
 {
     public class StatueController : GridObject
     {
-        public Vector2Int outDir;
-
         public override void Init(int x, int y, Direction dir)
         {
             base.Init(x, y, dir);
-            this.gridObjectType = GridObjectType.Statue;
-        }
-        
-        public override void Interact()
-        {
-            //按E键交互
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                //TODO:待完成交互逻辑,将面朝逻辑改向玩家面朝方向
-                //判定玩家位置是否在雕像周围四格
-                
-                
-            }
+            gridObjectType = GridObjectType.Statue;
+            isBlockingMovement = true;
+            isMovable = true; // 标记为可移动
         }
 
-        /// <summary>
-        /// 用于初始化雕像的出声方向
-        /// </summary>
-        /// <param name="dir">出声方向</param>
-        public void SetOutChantDir(Vector2Int dir)
+        public override void Interact()
         {
-            outDir = dir;
+            // 简单的旋转交互
+            // 注意：PlayerMovement 中已经实现了“周围四格自动转向玩家”的逻辑
+            // 这里可以实现“对着按E旋转”的补充逻辑
+            int d = (int)direction;
+            d = (d + 1) % 4; // 简单顺时针
+            // 实际上 Editor 里是 Face to Player，这里可以留空或做特殊处理
+        }
+
+        // 当被 LevelManager 推动时调用此方法更新视觉
+        public void OnPush(Direction pushDir)
+        {
+            float size = LevelManager.Instance.cellSize;
+            // 这里的 gridCoordinates 已经被 Manager 更新过了
+            Vector3 targetPos = new Vector3(gridCoordinates.x * size, gridCoordinates.y * size, 0);
+            
+            // 简单处理：直接瞬移或使用协程平滑移动
+            // 为了代码简洁这里直接设置位置，建议在 Update 中用插值实现平滑
+            transform.position = targetPos; 
         }
 
         public override void OnChant(int powerLevel, Direction inputDir)
         {
             base.OnChant(powerLevel, inputDir);
-            //将传入的Chant方向转变为outDir，并使powerLevel+1并输出
-            Vector2Int chantDir = DirectionToVector2Int(inputDir);
-            Vector2Int finalDir = new Vector2Int(outDir.x,outDir.y);
-            int finalPowerLevel = powerLevel + 1;
-            Debug.Log("雕像被击中，向方向 " + finalDir + " 以力量等级 " + finalPowerLevel + " 出声");
-        }
-
-        public void OnPush(Direction inputDir)
-        {
-            //推动逻辑:先判断雕像前方的情况，如果是虚空，或有实体（除了ground）则直接return
-            
+            // 视觉反馈：雕像发光或播放音效
+            Debug.Log($"Statue boosted chant! Power {powerLevel} -> {powerLevel+1}");
         }
     }
 }

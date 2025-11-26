@@ -32,7 +32,7 @@ namespace Game.Data
         public int y;
 
         // 【新增】定义格子像素大小，方便全局调用
-        public const float UnitSize = 80f;
+        public const float UnitSize = 1f;
 
         public GridCoordinates(int x, int y)
         {
@@ -46,7 +46,7 @@ namespace Game.Data
             return new GridCoordinates(a.x + b.x, a.y + b.y);
         }
 
-        // 方便转成 Vector3 进行物体摆放，注意这里乘以了 80
+        // 方便转成 Vector3 进行物体摆放
         public Vector3 ToWorldPos()
         {
             return new Vector3(x * UnitSize, y * UnitSize, 0);

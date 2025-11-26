@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Data;
+using Game.Core;
 using UnityEngine.UI;
 
 namespace Game.Data
@@ -29,90 +30,35 @@ namespace Game.Data
         public override void Init(int x, int y, Direction dir)
         {
             base.Init(x, y, dir);
-            this.gridObjectType = GridObjectType.Scroll;
-        }
-        private void Awake()
-        {
-            GetText(textFile);
-
-            // 初始时隐藏文本面板
-            if (textPanel != null)
-                textPanel.SetActive(false);
-        }
-
-        private void OnEnable()
-        {
-            textFinished = true;
-            StartCoroutine(SetTextUI());
+            gridObjectType = GridObjectType.Scroll;
+            isBlockingMovement = false; // 允许玩家走上来
         }
 
         private void OnTriggerEnter2D(Collider2D collision)
         {
-            if (collision.gameObject.CompareTag("Player") && !isCollected)
+            if (collision.CompareTag("Player"))
+            {
+                OnCollected();
+            }
+        }
+
+        // 如果不用 Trigger，也可以在 PlayerMovement 进入格子时调用
+        public void OnCollected()
+        {
+            if(!isCollected)
             {
                 isCollected = true;
-       
-                //TODO:显示卷轴文本
-                Debug.Log("卷轴被拾取，显示文本: " + scrollText);
+                GameManager.Instance.CollectScroll();
+                 
+                // 原有的 UI 显示逻辑
+                // Debug.Log("Scroll Collected!");
+                 
+                // 视觉上隐藏卷轴，但保留对象以显示 UI
+                GetComponent<SpriteRenderer>().enabled = false;
+                // 从网格逻辑中移除
+                if(LevelManager.Instance != null) 
+                    LevelManager.Instance.UpdateGrid(gridCoordinates.x, gridCoordinates.y, null);
             }
         }
-
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Mouse0) && isCollected ) { 
-                if (textFinished && index == textList.Count)
-                {
-                    // 文本显示完毕，关闭UI
-                    if (textPanel != null)
-                        textPanel.SetActive(false);
-
-                    uiTextBox.text = "";
-                    textLabel.text = "";
-                    isCollected = false;
-                    //关闭文本框的逻辑
-                }
-                else if (textFinished)
-                {
-                    StartCoroutine(SetTextUI());
-                }
-                else
-                {
-                    cancelTyping = true;
-                }
-
-            }
-        }
-
-        void GetText(TextAsset file)//获取文本
-        {
-            textList.Clear();
-            index = 0;
-
-            var lineData = file.text.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
-            foreach (var line in lineData)
-            {
-                textList.Add(line);
-            }
-        }
-
-        IEnumerator SetTextUI()
-        {
-            textFinished = false;
-            textLabel.text = "";
-
-            int letter = 0;
-            while (!cancelTyping && letter < textList[index].Length - 1)
-            {
-                textLabel.text += textList[index][letter];
-                letter++;
-                yield return new WaitForSeconds(textspeed);
-            }
-            textLabel.text = textList[index];
-            cancelTyping = false;
-            textFinished = true;
-            index++;
-        }
-
-
     }
 }

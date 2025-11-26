@@ -1,145 +1,155 @@
+// --- PlayerMovement.cs ---
+
+using Game.Core;
 using Game.Data;
-using System.Collections;
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
-public class PlayerMovement : GridObject
-{   
-
-    private Rigidbody2D rb;
-    private BoxCollider2D coll;
-    private Animator anim;
-    private SpriteRenderer spriteRenderer;
-
-    //
-    private float moveSpeed = 5f;   //
-    private Vector2 movement;       //
-    private bool isMoving = false;  //
-    private Vector3 targetPosition; //
-
-    private float gridSize = 1f;      
-
-    void Awake()
+namespace Game.Core
+{
+    public class PlayerMovement : GridObject
     {
-        isBlockingMovement = true;
-        isMovable = false;
+        private Animator anim;
+        private SpriteRenderer spriteRenderer;
 
-        gridCoordinates = new GridCoordinates(0, 0);
-        direction = Direction.down;
-    }
+        // 【修改】调高移动速度，让格子移动更干脆
+        private float moveSpeed = 20f;
 
+        // 【新增】是否开启平滑移动（设为 false 则为瞬移）
+        public bool useSmoothMovement = true;
 
+        private bool isMoving = false;
+        private Vector3 targetPosition;
 
-    void Start()
-    {
-        rb = GetComponent<Rigidbody2D>();
-        coll = GetComponent<BoxCollider2D>();
-        anim = GetComponent<Animator>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
-
-        targetPosition = transform.position;
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        HandleInput();
-        HandleMovement();
-        UpdateAnimation();
-        Interact();
-
-
-    }
-    private void HandleInput()
-    {
-        if (isMoving) 
-            return;
-
-        if (Input.GetKeyDown(KeyCode.W)) // 
-            TryMove(Direction.up);
-        else if (Input.GetKeyDown(KeyCode.S)) // 
-            TryMove(Direction.down);
-        else if (Input.GetKeyDown(KeyCode.A)) // 
-            TryMove(Direction.left);
-        else if (Input.GetKeyDown(KeyCode.D)) // 
-            TryMove(Direction.right);
-    }
-
-    private void HandleMovement()
-    {
-        if (isMoving)
+        void Awake()
         {
-            transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+            isBlockingMovement = true;
+            gridObjectType = GridObjectType.Player;
+        }
 
-            if (Vector3.Distance(transform.position, targetPosition) < 0.01f)
+        public override void Init(int x, int y, Direction dir)
+        {
+            base.Init(x, y, dir);
+            targetPosition = transform.position;
+        }
+
+        void Start()
+        {
+            anim = GetComponent<Animator>();
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        void Update()
+        {
+            // 只有完全停止时才接受下一次输入
+            if (!isMoving)
             {
-                transform.position = targetPosition;
-                isMoving = false;
-                UpdateGridCoordinatesFromPosition();
+                HandleInput();
+            }
+
+            HandleMovement();
+            UpdateAnimation();
+        }
+
+        private void HandleInput()
+        {
+            // 1. 移动输入
+            Direction? inputDir = null;
+
+            // 【修改】使用 GetKeyDown 代替 GetKey
+            // 这样玩家必须每次按下按键才会移动一格，手感就是“一格一格”的
+            if (Input.GetKeyDown(KeyCode.W)) inputDir = Direction.up;
+            else if (Input.GetKeyDown(KeyCode.S)) inputDir = Direction.down;
+            else if (Input.GetKeyDown(KeyCode.A)) inputDir = Direction.left;
+            else if (Input.GetKeyDown(KeyCode.D)) inputDir = Direction.right;
+
+            if (inputDir.HasValue)
+            {
+                // 转向逻辑
+                if (direction != inputDir.Value)
+                {
+                    direction = inputDir.Value;
+                    UpdateVisualRotation();
+                    // 如果希望“转向时不移动”，保留 return
+                    // 如果希望“转向并立刻移动”，注释掉 return
+                    return;
+                }
+
+                // 申请移动
+                if (LevelManager.Instance.RequestMove(this, inputDir.Value))
+                {
+                    float size = LevelManager.Instance.cellSize;
+                    targetPosition = new Vector3(gridCoordinates.x * size, gridCoordinates.y * size,
+                        transform.position.z);
+
+                    // 标记开始移动
+                    isMoving = true;
+
+                    // 如果关闭了平滑移动，直接瞬移
+                    if (!useSmoothMovement)
+                    {
+                        transform.position = targetPosition;
+                        isMoving = false;
+                    }
+                }
+            }
+
+            // 2. 咏唱输入
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                LevelManager.Instance.CastChant(gridCoordinates, direction);
+            }
+
+            // 3. 交互输入
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                TryInteract();
             }
         }
-    }
 
-
-    void TryMove(Direction moveDirection)
-    {
-        GridCoordinates targetCoord = CalculateTargetGridPosition(moveDirection);
-
-        Vector3 worldTargetPos = new Vector3(targetCoord.x * gridSize, targetCoord.y * gridSize, transform.position.z);
-
-     
-        targetPosition = worldTargetPos;
-        isMoving = true;
-
-        direction = moveDirection;
-
-        gridCoordinates = targetCoord;
-        
-    }
-
-    private GridCoordinates CalculateTargetGridPosition(Direction dir)
-    {
-        int targetX = gridCoordinates.x;
-        int targetY = gridCoordinates.y;
-
-        switch (dir)
+        private void HandleMovement()
         {
-            case Direction.up:
-                targetY += 1;
-                break;
-            case Direction.down:
-                targetY -= 1;
-                break;
-            case Direction.left:
-                targetX -= 1;
-                break;
-            case Direction.right:
-                targetX += 1;
-                break;
+            // 只有开启平滑移动时才执行插值
+            if (isMoving && useSmoothMovement)
+            {
+                transform.position =
+                    Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+
+                // 距离极近时吸附并停止
+                if (Vector3.Distance(transform.position, targetPosition) < 0.001f)
+                {
+                    transform.position = targetPosition;
+                    isMoving = false;
+                }
+            }
         }
 
-        return new GridCoordinates(targetX, targetY);
-    }
+        private void TryInteract()
+        {
+            // ... (保持不变) ...
+            Vector2Int dirVec = DirectionToVector2Int(direction);
+            GridObject target =
+                LevelManager.Instance.GetGridObject(gridCoordinates.x + dirVec.x, gridCoordinates.y + dirVec.y);
+            if (target != null) target.Interact();
 
-    private void UpdateGridCoordinatesFromPosition()
-    {
-        gridCoordinates = new GridCoordinates(
-            Mathf.RoundToInt(transform.position.x / gridSize),
-            Mathf.RoundToInt(transform.position.y / gridSize)
-        );
-    }
+            Vector2Int[] offsets =
+                { new Vector2Int(0, 1), new Vector2Int(0, -1), new Vector2Int(-1, 0), new Vector2Int(1, 0) };
+            foreach (var off in offsets)
+            {
+                GridObject obj =
+                    LevelManager.Instance.GetGridObject(gridCoordinates.x + off.x, gridCoordinates.y + off.y);
+                if (obj != null && obj.gridObjectType == GridObjectType.Statue)
+                {
+                    Vector2Int rev = new Vector2Int(-off.x, -off.y);
+                    obj.direction = Vector2IntToDirection(rev);
+                    obj.SendMessage("UpdateVisualRotation");
+                }
+            }
+        }
 
-    private void UpdateAnimation()
-    {
-        anim.SetFloat("Horizontal", movement.x);
-        anim.SetFloat("Vertical", movement.y);
-        anim.SetFloat("Speed", movement.sqrMagnitude);
-        if (movement.x < 0)
-            spriteRenderer.flipX = true;
-        else if (movement.x > 0)
-            spriteRenderer.flipX = false;
+        private void UpdateAnimation()
+        {
+            if (anim == null) return;
+            anim.SetBool("IsMoving", isMoving);
+        }
     }
-
 }
