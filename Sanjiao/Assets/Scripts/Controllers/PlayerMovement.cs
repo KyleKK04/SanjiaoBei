@@ -93,10 +93,16 @@ namespace Game.Core
                 }
             }
 
-            // 2. 咏唱输入
             if (Input.GetKeyDown(KeyCode.Q))
             {
+                // 可以在这里加一个 isChanting 标记来禁止移动，看你需求
                 LevelManager.Instance.CastChant(gridCoordinates, direction);
+            }
+
+            // 【新增】松开 Q：销毁所有射线
+            if (Input.GetKeyUp(KeyCode.Q))
+            {
+                LevelManager.Instance.StopChant();
             }
 
             // 3. 交互输入

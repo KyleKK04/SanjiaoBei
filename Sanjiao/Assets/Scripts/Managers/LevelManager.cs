@@ -1,3 +1,4 @@
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,6 +26,7 @@ namespace Game.Core
         public GameObject scrollPrefab;
         public GameObject doorPrefab;
         public GameObject playerPrefab; 
+        public GameObject chantPrefab; 
 
         [Header("Settings")]
         public float cellSize = 1f; // 网格单元大小
@@ -167,39 +169,31 @@ namespace Game.Core
                         if (gridObj is DoorController door)
                             door.SetRequiredPower(element.requiredDoorPower);
 
+                        // 如果是卷轴，如果LevelSO里配了文本，可以这里赋值
+                        if (gridObj is ScrollController scroll && !string.IsNullOrEmpty(currentLevelData.scrollDialogue))
+                        {
+                            // 如果你想用 SO 里的 scrollDialogue 覆盖卷轴自带的文本，可以在这赋值
+                            // scroll.SetTextContent(currentLevelData.scrollDialogue);
+                        }
+
                         UpdateGrid(element.position.x, element.position.y, gridObj);
                     }
                 }
             }
 
-            // ==========================================
-            // 【新增逻辑】3. 调整摄像机对准地图中心
-            // ==========================================
+            // 3. 调整摄像机对准地图中心
             CenterCamera();
         }
 
-        /// <summary>
-        /// 将主摄像机移动到当前地图的中心位置
-        /// </summary>
         private void CenterCamera()
         {
             if (Camera.main != null)
             {
-                // 计算中心坐标
-                // 假设地图从 (0,0) 到 (width-1, height-1)
                 float centerX = (width - 1) * cellSize / 2f;
                 float centerY = (height - 1) * cellSize / 2f;
-
-                // 保持摄像机 Z 轴为 -10，防止裁切
                 Camera.main.transform.position = new Vector3(centerX, centerY, -10f);
-                
-                // 【可选】根据地图大小自动调整摄像机视野 (Orthographic Size)
-                // 确保地图能在屏幕内完全显示。+2 是为了留点边距。
-                // Camera.main.orthographicSize = (height / 2f) + 2f;
             }
         }
-
-        // --- 以下逻辑保持不变 ---
 
         public void UpdateGrid(int x, int y, GridObject obj)
         {
@@ -223,12 +217,14 @@ namespace Game.Core
 
             GridObject targetObj = gridMap[targetPos.x, targetPos.y];
 
+            // 1. 空地
             if (targetObj == null || targetObj.gridObjectType == GridObjectType.Ground)
             {
                 MoveObjectInGrid(player, currentPos, targetPos);
                 return true;
             }
 
+            // 2. 阻挡物 (墙、门、恶鬼)
             if (targetObj.isBlockingMovement)
             {
                 if (targetObj.gridObjectType == GridObjectType.Statue)
@@ -238,8 +234,17 @@ namespace Game.Core
                 return false;
             }
 
+            // 3. 卷轴 (特殊处理：允许移动上去，并触发拾取)
             if (targetObj.gridObjectType == GridObjectType.Scroll)
             {
+                // 【新增】触发卷轴收集逻辑
+                ScrollController scroll = targetObj as ScrollController;
+                if (scroll != null)
+                {
+                    scroll.OnCollected();
+                }
+
+                // 玩家覆盖到卷轴的位置上 (卷轴在网格数据中被玩家顶替)
                 MoveObjectInGrid(player, currentPos, targetPos);
                 return true;
             }
@@ -278,22 +283,67 @@ namespace Game.Core
             obj.gridCoordinates = newPos;
         }
 
+        // 【新增】用于存储当前存在的所有咏唱特效物体
+        private List<GameObject> activeChantEffects = new List<GameObject>();
+
+        // 1. 开始咏唱
         public void CastChant(GridCoordinates startPos, Direction startDir)
         {
+            // 为了安全，先清理一次（防止快速连按导致的残留）
+            StopChant(); 
             StartCoroutine(PropagateChant(startPos, startDir));
         }
 
+        // 2. 【新增】停止咏唱 (供 PlayerMovement 的 KeyUp 调用)
+        public void StopChant()
+        {
+            // 停止生成协程（如果波还在传，立即打断）
+            StopAllCoroutines(); 
+
+            // 销毁所有特效物体
+            foreach (var effect in activeChantEffects)
+            {
+                if (effect != null) Destroy(effect);
+            }
+            activeChantEffects.Clear();
+        }
+
+        // 3. 修改传播协程
         IEnumerator PropagateChant(GridCoordinates startPos, Direction startDir)
         {
             int power = 1;
             Direction currentDir = startDir;
             GridCoordinates currentPos = startPos;
             
+            float stepDelay = 0.15f; 
+
             int safety = 0;
-            while (safety < 50)
+            while (safety < 50) 
             {
                 safety++;
                 
+                // --- 生成特效并加入列表 ---
+                if (chantPrefab != null)
+                {
+                    Vector3 spawnPos = new Vector3(currentPos.x * cellSize, currentPos.y * cellSize, 0);
+                    GameObject effect = Instantiate(chantPrefab, spawnPos, Quaternion.identity);
+                    
+                    // 计算旋转
+                    float angle = 0f;
+                    switch (currentDir)
+                    {
+                        case Direction.up: angle = 0f; break;
+                        case Direction.left: angle = 90f; break;
+                        case Direction.down: angle = 180f; break;
+                        case Direction.right: angle = -90f; break;
+                    }
+                    effect.transform.rotation = Quaternion.Euler(0, 0, angle);
+
+                    // 【关键】加入列表进行管理
+                    activeChantEffects.Add(effect);
+                }
+                // ---------------------------
+
                 GridObject obj = GetGridObject(currentPos.x, currentPos.y);
                 if (obj != null)
                 {
@@ -319,9 +369,10 @@ namespace Game.Core
                 }
 
                 currentPos = GetNextCoord(currentPos, currentDir);
+                
                 if (!IsBounds(currentPos.x, currentPos.y)) break;
 
-                yield return new WaitForSeconds(0.1f); 
+                yield return new WaitForSeconds(stepDelay); 
             }
         }
         

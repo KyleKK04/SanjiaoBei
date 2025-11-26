@@ -433,11 +433,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: d016f65d9f708e743a23626d04dd72ce, type: 2}
   groundPrefab: {fileID: 6935989602652515325, guid: ce225f1df14b4f744b89bf85d2043f16, type: 3}
   wallPrefab: {fileID: 0}
-  statuePrefab: {fileID: 0}
-  evilStatuePrefab: {fileID: 0}
-  scrollPrefab: {fileID: 0}
-  doorPrefab: {fileID: 0}
+  statuePrefab: {fileID: 2261772982673330186, guid: f51d7801a20880740bef12f97ca46c4b, type: 3}
+  evilStatuePrefab: {fileID: 3315679939887120216, guid: 64dc640cc44a76844a7c5a30cabd238e, type: 3}
+  scrollPrefab: {fileID: 4629763409297696328, guid: 2ce1a3a989894594fa214a9b04b7e218, type: 3}
+  doorPrefab: {fileID: 8823400677523534360, guid: 4c6461c8d9ae25f46863b042a50f763d, type: 3}
   playerPrefab: {fileID: 9184069625836517357, guid: f489480a4ac3efa4abbececed5d64164, type: 3}
+  chantPrefab: {fileID: 1948356210714172811, guid: b7ec05bc60169e04f903472265aab0fd, type: 3}
   cellSize: 1
   playerInstance: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
