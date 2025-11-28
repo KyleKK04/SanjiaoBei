@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,26 +9,27 @@ namespace Game.Core
     {
         public static LevelManager Instance;
 
-        [Header("Levels Configuration")]
-        [Tooltip("将所有的 LevelSO 拖拽到这里")]
-        public List<LevelSO> levels = new List<LevelSO>(); 
-        
+        [Header("Levels Configuration")] [Tooltip("将所有的 LevelSO 拖拽到这里")]
+        public List<LevelSO> levels = new List<LevelSO>();
+
         // 当前正在运行的关卡数据（内部使用）
         private LevelSO currentLevelData;
         private int currentLevelIndex = 0;
 
-        [Header("Prefabs Mapping")]
-        public GameObject groundPrefab;
+        [Header("Prefabs Mapping")] public GameObject groundPrefab;
         public GameObject wallPrefab;
         public GameObject statuePrefab;
         public GameObject evilStatuePrefab;
         public GameObject scrollPrefab;
         public GameObject doorPrefab;
-        public GameObject playerPrefab; 
-        public GameObject chantPrefab; 
+        public GameObject playerPrefab;
+        public GameObject chantPrefab;
+        public GameObject backgroundPrefab;
 
-        [Header("Settings")]
-        public float cellSize = 1f; // 网格单元大小
+        [Header("Settings")] public float cellSize = 1f; // 网格单元大小
+
+        // 【新增】摄像机纵向偏移量：正数会让摄像机上移（格子看起来下移）
+        public float cameraOffsetY = 3f;
 
         // 运行时网格数据
         private GridObject[,] gridMap;
@@ -101,6 +101,7 @@ namespace Game.Core
             {
                 Destroy(transform.GetChild(i).gameObject);
             }
+
             gridMap = null;
             playerInstance = null;
         }
@@ -123,11 +124,11 @@ namespace Game.Core
                         GameObject groundObj = Instantiate(groundPrefab, transform);
                         groundObj.transform.position = new Vector3(x * cellSize, y * cellSize, 0);
                         SpriteRenderer sr = groundObj.GetComponent<SpriteRenderer>();
-                        if (sr != null) sr.sortingOrder = -10; 
+                        if (sr != null) sr.sortingOrder = -10;
                     }
                 }
             }
-            
+
             // 2. 生成物体
             foreach (var element in currentLevelData.elements)
             {
@@ -141,36 +142,43 @@ namespace Game.Core
                     case GridObjectType.GhostStatue: prefabToSpawn = evilStatuePrefab; break;
                     case GridObjectType.Scroll: prefabToSpawn = scrollPrefab; break;
                     case GridObjectType.Door: prefabToSpawn = doorPrefab; break;
-                    
+
                     case GridObjectType.SpawnPoint:
                         if (playerInstance == null && playerPrefab != null)
                         {
                             GameObject p = Instantiate(playerPrefab, transform);
                             playerInstance = p.GetComponent<PlayerMovement>();
                         }
+
                         if (playerInstance != null)
                         {
                             playerInstance.Init(element.position.x, element.position.y, element.initialFacing);
                             UpdateGrid(element.position.x, element.position.y, playerInstance);
                         }
-                        continue; 
-                    
+
+                        continue;
+
                     default: continue;
                 }
 
                 if (prefabToSpawn != null)
                 {
-                    GameObject obj = Instantiate(prefabToSpawn, transform); 
+                    GameObject obj = Instantiate(prefabToSpawn, transform);
                     GridObject gridObj = obj.GetComponent<GridObject>();
-                    
+
                     if (gridObj != null)
                     {
                         gridObj.Init(element.position.x, element.position.y, element.initialFacing);
+                        // 【修改】针对门进行特殊初始化
                         if (gridObj is DoorController door)
-                            door.SetRequiredPower(element.requiredDoorPower);
+                        {
+                            // 传入等级和类型
+                            door.SetDoorData(element.requiredDoorPower, element.doorType);
+                        }
 
                         // 如果是卷轴，如果LevelSO里配了文本，可以这里赋值
-                        if (gridObj is ScrollController scroll && !string.IsNullOrEmpty(currentLevelData.scrollDialogue))
+                        if (gridObj is ScrollController scroll &&
+                            !string.IsNullOrEmpty(currentLevelData.scrollDialogue))
                         {
                             // 如果你想用 SO 里的 scrollDialogue 覆盖卷轴自带的文本，可以在这赋值
                             // scroll.SetTextContent(currentLevelData.scrollDialogue);
@@ -187,11 +195,21 @@ namespace Game.Core
 
         private void CenterCamera()
         {
-            if (Camera.main != null)
+// 1. 计算原本的地图几何中心
+            float centerX = (width - 1) * cellSize / 2f;
+            float centerY = (height - 1) * cellSize / 2f;
+
+            // 2. 施加偏移量
+            // 如果你想让格子视觉上“往下移”，摄像机就需要“往上移” (+Y)
+            float targetCamY = centerY + cameraOffsetY;
+
+            // 3. 设置摄像机位置
+            Camera.main.transform.position = new Vector3(centerX, targetCamY, -10f);
+
+            // 4. 设置背景位置 (通常背景跟随摄像机中心)
+            if (backgroundPrefab != null)
             {
-                float centerX = (width - 1) * cellSize / 2f;
-                float centerY = (height - 1) * cellSize / 2f;
-                Camera.main.transform.position = new Vector3(centerX, centerY, -10f);
+                backgroundPrefab.transform.position = new Vector3(centerX, targetCamY, 0f);
             }
         }
 
@@ -213,7 +231,7 @@ namespace Game.Core
             GridCoordinates currentPos = player.gridCoordinates;
             GridCoordinates targetPos = GetNextCoord(currentPos, moveDir);
 
-            if (!IsBounds(targetPos.x, targetPos.y)) return false; 
+            if (!IsBounds(targetPos.x, targetPos.y)) return false;
 
             GridObject targetObj = gridMap[targetPos.x, targetPos.y];
 
@@ -231,6 +249,7 @@ namespace Game.Core
                 {
                     return TryPushStatue((StatueController)targetObj, moveDir, player);
                 }
+
                 return false;
             }
 
@@ -264,21 +283,22 @@ namespace Game.Core
             if (objBehindStatue == null || objBehindStatue.gridObjectType == GridObjectType.Ground)
             {
                 MoveObjectInGrid(statue, statueCurrent, statueTarget);
-                statue.OnPush(pushDir); 
+                statue.OnPush(pushDir);
 
                 MoveObjectInGrid(player, player.gridCoordinates, statueCurrent);
                 return true;
             }
+
             return false;
         }
 
         private void MoveObjectInGrid(GridObject obj, GridCoordinates oldPos, GridCoordinates newPos)
         {
             if (IsBounds(oldPos.x, oldPos.y) && gridMap[oldPos.x, oldPos.y] == obj)
-                gridMap[oldPos.x, oldPos.y] = null; 
-            
+                gridMap[oldPos.x, oldPos.y] = null;
+
             if (IsBounds(newPos.x, newPos.y))
-                gridMap[newPos.x, newPos.y] = obj; 
+                gridMap[newPos.x, newPos.y] = obj;
 
             obj.gridCoordinates = newPos;
         }
@@ -290,7 +310,7 @@ namespace Game.Core
         public void CastChant(GridCoordinates startPos, Direction startDir)
         {
             // 为了安全，先清理一次（防止快速连按导致的残留）
-            StopChant(); 
+            StopChant();
             StartCoroutine(PropagateChant(startPos, startDir));
         }
 
@@ -298,13 +318,14 @@ namespace Game.Core
         public void StopChant()
         {
             // 停止生成协程（如果波还在传，立即打断）
-            StopAllCoroutines(); 
+            StopAllCoroutines();
 
             // 销毁所有特效物体
             foreach (var effect in activeChantEffects)
             {
                 if (effect != null) Destroy(effect);
             }
+
             activeChantEffects.Clear();
         }
 
@@ -314,20 +335,20 @@ namespace Game.Core
             int power = 1;
             Direction currentDir = startDir;
             GridCoordinates currentPos = startPos;
-            
-            float stepDelay = 0.15f; 
+
+            float stepDelay = 0.15f;
 
             int safety = 0;
-            while (safety < 50) 
+            while (safety < 50)
             {
                 safety++;
-                
+
                 // --- 生成特效并加入列表 ---
                 if (chantPrefab != null)
                 {
                     Vector3 spawnPos = new Vector3(currentPos.x * cellSize, currentPos.y * cellSize, 0);
                     GameObject effect = Instantiate(chantPrefab, spawnPos, Quaternion.identity);
-                    
+
                     // 计算旋转
                     float angle = 0f;
                     switch (currentDir)
@@ -337,6 +358,7 @@ namespace Game.Core
                         case Direction.down: angle = 180f; break;
                         case Direction.right: angle = -90f; break;
                     }
+
                     effect.transform.rotation = Quaternion.Euler(0, 0, angle);
 
                     // 【关键】加入列表进行管理
@@ -351,61 +373,66 @@ namespace Game.Core
 
                     if (obj.gridObjectType == GridObjectType.Statue)
                     {
-                        currentDir = obj.direction; 
-                        power++; 
+                        currentDir = obj.direction;
+                        power++;
                     }
                     else if (obj.gridObjectType == GridObjectType.Wall)
                     {
-                        break; 
+                        break;
                     }
                     else if (obj.gridObjectType == GridObjectType.GhostStatue)
                     {
-                        if (power < 3) break; 
+                        if (power < 3) break;
                     }
                     else if (obj.gridObjectType == GridObjectType.Door)
                     {
-                        break; 
+                        break;
                     }
                 }
 
                 currentPos = GetNextCoord(currentPos, currentDir);
-                
+
                 if (!IsBounds(currentPos.x, currentPos.y)) break;
 
-                yield return new WaitForSeconds(stepDelay); 
+                yield return new WaitForSeconds(stepDelay);
             }
         }
-        
+
         public bool CheckLineOfSight(GridCoordinates start, Direction dir, GridCoordinates target)
         {
-             GridCoordinates pos = start;
-             int watchdog = 0;
-             while(watchdog < 20)
-             {
-                 watchdog++;
-                 pos = GetNextCoord(pos, dir);
-                 if(!IsBounds(pos.x, pos.y)) return false;
-                 
-                 if(pos.x == target.x && pos.y == target.y) return true;
+            GridCoordinates pos = start;
+            int watchdog = 0;
+            while (watchdog < 20)
+            {
+                watchdog++;
+                pos = GetNextCoord(pos, dir);
+                if (!IsBounds(pos.x, pos.y)) return false;
 
-                 GridObject obj = GetGridObject(pos.x, pos.y);
-                 if(obj != null && (obj.gridObjectType == GridObjectType.Wall || obj.gridObjectType == GridObjectType.Statue || obj.gridObjectType == GridObjectType.Door || obj.gridObjectType == GridObjectType.GhostStatue))
-                 {
-                     return false; 
-                 }
-             }
-             return false;
+                if (pos.x == target.x && pos.y == target.y) return true;
+
+                GridObject obj = GetGridObject(pos.x, pos.y);
+                if (obj != null && (obj.gridObjectType == GridObjectType.Wall ||
+                                    obj.gridObjectType == GridObjectType.Statue ||
+                                    obj.gridObjectType == GridObjectType.Door ||
+                                    obj.gridObjectType == GridObjectType.GhostStatue))
+                {
+                    return false;
+                }
+            }
+
+            return false;
         }
 
         private GridCoordinates GetNextCoord(GridCoordinates cur, Direction dir)
         {
-             switch (dir)
+            switch (dir)
             {
                 case Direction.up: return new GridCoordinates(cur.x, cur.y + 1);
                 case Direction.down: return new GridCoordinates(cur.x, cur.y - 1);
                 case Direction.left: return new GridCoordinates(cur.x - 1, cur.y);
                 case Direction.right: return new GridCoordinates(cur.x + 1, cur.y);
             }
+
             return cur;
         }
     }

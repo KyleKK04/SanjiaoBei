@@ -75,10 +75,22 @@ MonoBehaviour:
   isBlockingMovement: 0
   isMovable: 0
   useSmoothMovement: 1
-  UpSprite: {fileID: 21300000, guid: 7f7f415c03bca3a48b1fe508dab53ccd, type: 3}
-  DownSprite: {fileID: 21300000, guid: a87179023f1895642a3e841ceea8ad3a, type: 3}
-  LeftSprite: {fileID: 21300000, guid: c7a79c2e56178584b837b7c8eedaa185, type: 3}
-  RightSprite: {fileID: 21300000, guid: c2eb7b1251eeece42a519d1db1ca62f4, type: 3}
+  UpSprite: {fileID: 21300000, guid: 3e538490be9cf5a4b8cc82b268d093a0, type: 3}
+  DownSprite: {fileID: 21300000, guid: c83ae33bd0c5516479f07ab3da848b64, type: 3}
+  LeftSprite: {fileID: 21300000, guid: 55411f3135a3a36429b5dfc9f8d15796, type: 3}
+  RightSprite: {fileID: 21300000, guid: 37c318297ea53e64ab2fa4deb1bfffd6, type: 3}
+  PushUpSprite: {fileID: 21300000, guid: 962adcdcd8c7c4f47a1fd398405bcf47, type: 3}
+  PushDownSprite: {fileID: 21300000, guid: ae02d2d5dc6988a4796df0aa034e47a6, type: 3}
+  PushLeftSprite: {fileID: 21300000, guid: 52265bdd5b7fe6a459576a5dc0ce54f2, type: 3}
+  PushRightSprite: {fileID: 21300000, guid: 7df6e579274e1fd498c5378075a9ba35, type: 3}
+  PrayUpSprite: {fileID: 21300000, guid: 30c48c1603a448746a92f7d9c8cd68ce, type: 3}
+  PrayDownSprite: {fileID: 21300000, guid: 702198fbb651ad34aaab86afacbbddbc, type: 3}
+  PrayLeftSprite: {fileID: 21300000, guid: b04a6542535090e4293c021921df11fd, type: 3}
+  PrayRightSprite: {fileID: 21300000, guid: 446f995edc45d8d4a858daacf2ce417c, type: 3}
+  ChantUpSprite: {fileID: 21300000, guid: fcd514904af3b78459011c1527b2e98e, type: 3}
+  ChantDownSprite: {fileID: 21300000, guid: 49d21d0637f80834abd1a8b9523d3e54, type: 3}
+  ChantLeftSprite: {fileID: 21300000, guid: c96dd0cb79ecde8488c9e2145e2816f6, type: 3}
+  ChantRightSprite: {fileID: 21300000, guid: 200467bba42922a438664d0acfac9cea, type: 3}
 --- !u!212 &1156469777223410012
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -120,12 +132,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 7f7f415c03bca3a48b1fe508dab53ccd, type: 3}
+  m_Sprite: {fileID: 21300000, guid: c83ae33bd0c5516479f07ab3da848b64, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1.425, y: 2.1125}
+  m_Size: {x: 1, y: 2.2625}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1

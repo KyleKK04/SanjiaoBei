@@ -15,6 +15,7 @@ namespace Game.Data
         public Sprite SpottedLeftSprite;
         public Sprite SpottedRightSprite;
         
+        private bool isDestroyed = false;
         private bool isSpottingPlayer = false;
         private SpriteRenderer spriteRenderer;
         public override void Init(int x, int y, Direction dir)
@@ -28,7 +29,7 @@ namespace Game.Data
         private void Update()
         {
             // 每一帧检测是否能看到玩家
-            if (LevelManager.Instance != null && LevelManager.Instance.playerInstance != null)
+            if (LevelManager.Instance != null && LevelManager.Instance.playerInstance != null && !isDestroyed)
             {
                 CheckKillPlayer();
             }
@@ -69,7 +70,7 @@ namespace Game.Data
             if (powerLevel >= 3)
             {
                 Debug.Log("Evil Statue Destroyed!");
-                RemoveFromGrid(); // 销毁自己
+                isDestroyed = true;
             }
             else
             {
@@ -79,7 +80,7 @@ namespace Game.Data
 
         public void UpdateAnimation()
         {
-            if (direction == Direction.up)
+            if (direction == Direction.up && !isDestroyed)
             {
                 if (isSpottingPlayer)
                 {
@@ -90,7 +91,7 @@ namespace Game.Data
                     spriteRenderer.sprite = UpSripte;
                 }
             }
-            else if (direction == Direction.down)
+            else if (direction == Direction.down && !isDestroyed)
             {
                 if (isSpottingPlayer)
                 {
@@ -101,7 +102,7 @@ namespace Game.Data
                     spriteRenderer.sprite = DownSprite;
                 }
             }
-            else if (direction == Direction.left)
+            else if (direction == Direction.left && !isDestroyed)
             {
                 if (isSpottingPlayer)
                 {
@@ -112,7 +113,7 @@ namespace Game.Data
                     spriteRenderer.sprite = LeftSprite;
                 }
             }
-            else if (direction == Direction.right)
+            else if (direction == Direction.right && !isDestroyed)
             {
                 if (isSpottingPlayer)
                 {
@@ -122,6 +123,11 @@ namespace Game.Data
                 {
                     spriteRenderer.sprite = RightSprite;
                 }
+            }
+
+            if (isDestroyed)
+            {
+                spriteRenderer.sprite = DestroyedSprite;
             }
         }
     }

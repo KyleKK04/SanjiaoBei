@@ -17,6 +17,7 @@ namespace Game.EditorTools
 
         // --- 笔刷设置 ---
         private int brushDoorPower = 3; // 绘制大门时默认需要的咏唱等级
+        private DoorType brushDoorType = DoorType.EndDoor;
 
         // --- 测试模式基础变量 ---
         private bool isTestMode = false;
@@ -240,11 +241,15 @@ namespace Game.EditorTools
             {
                 // 【核心修改】增加了 && hasCollectedScroll 判断
                 // 只有在【已拾取卷轴】且【强度足够】时，大门才会被激活
+                if (nextElement.doorType == DoorType.EndDoor)
+                {
+                    
                 if (hasCollectedScroll && nextPower >= nextElement.requiredDoorPower)
                 {
                     Debug.Log($"大门充能成功！(当前:{nextPower}, 需求:{nextElement.requiredDoorPower})");
                     // 记录该门已被充能
                     poweredDoors.Add(new Vector2Int(nextPos.x, nextPos.y));
+                }
                 }
                 else
                 {
@@ -470,6 +475,9 @@ namespace Game.EditorTools
                 LevelElement frontElement = tempMap[frontPos.x, frontPos.y];
                 if (frontElement.type == GridObjectType.Door)
                 {
+                    if (frontElement.doorType == DoorType.EndDoor)
+                    {
+                        
                     bool isPowered = poweredDoors.Contains(new Vector2Int(frontPos.x, frontPos.y));
                     if (hasCollectedScroll && isPowered)
                     {
@@ -481,6 +489,7 @@ namespace Game.EditorTools
                         if (!hasCollectedScroll) tips += "[未拾取卷轴] ";
                         if (!isPowered) tips += "[大门未充能] ";
                         Debug.Log(tips);
+                    }
                     }
                 }
             }
@@ -542,8 +551,15 @@ namespace Game.EditorTools
             // 如果选中大门，显示所需的等级设置
             if (selectedType == GridObjectType.Door)
             {
-                EditorGUILayout.LabelField("需等级:", GUILayout.Width(45));
-                brushDoorPower = EditorGUILayout.IntField(brushDoorPower, GUILayout.Width(30));
+                EditorGUILayout.LabelField("类型:", GUILayout.Width(35));
+                brushDoorType = (DoorType)EditorGUILayout.EnumPopup(brushDoorType, GUILayout.Width(70));
+
+                // 只有终点门才需要设置等级
+                if (brushDoorType == DoorType.EndDoor)
+                {
+                    EditorGUILayout.LabelField("Lv:", GUILayout.Width(20));
+                    brushDoorPower = EditorGUILayout.IntField(brushDoorPower, GUILayout.Width(30));
+                }
             }
 
             EditorGUILayout.EndHorizontal();
@@ -596,15 +612,16 @@ namespace Game.EditorTools
             // 2. 大门状态显示
             if (element.type == GridObjectType.Door)
             {
-                bool isPowered = isTestMode && poweredDoors.Contains(new Vector2Int(x, y));
-                if (isPowered)
+                if (element.doorType == DoorType.BeginDoor)
                 {
-                    cellColor = Color.cyan; // 激活后发光
-                    label += " [ON]";
+                    label = "DR"; // 起点门显示
+                    cellColor = new Color(0.4f, 0.4f, 0.4f); // 稍微暗一点
                 }
-                else
+                else // EndDoor
                 {
-                    label += $"{element.requiredDoorPower}";
+                    bool isPowered = isTestMode && poweredDoors.Contains(new Vector2Int(x, y));
+                    if (isPowered) { cellColor = Color.cyan; label += " [ON]"; }
+                    else { label += $"{element.requiredDoorPower}"; }
                 }
             }
 
@@ -622,7 +639,12 @@ namespace Game.EditorTools
                         // 放置
                         element.type = selectedType;
                         // 如果是门，应用笔刷的等级设置
-                        if (selectedType == GridObjectType.Door) element.requiredDoorPower = brushDoorPower;
+                        // 放置时保存笔刷属性
+                        if (selectedType == GridObjectType.Door)
+                        {
+                            element.doorType = brushDoorType;
+                            element.requiredDoorPower = brushDoorPower;
+                        }
                         Event.current.Use();
                     }
                     else if (Event.current.button == 1)
@@ -687,6 +709,7 @@ namespace Game.EditorTools
                     mapEl.type = el.type;
                     mapEl.initialFacing = el.initialFacing;
                     mapEl.requiredDoorPower = el.requiredDoorPower; // 读取门等级
+                    mapEl.doorType = el.doorType;
                 }
             }
 
@@ -709,7 +732,8 @@ namespace Game.EditorTools
                         position = new GridCoordinates(x, y),
                         type = el.type,
                         initialFacing = el.initialFacing,
-                        requiredDoorPower = el.requiredDoorPower
+                        requiredDoorPower = el.requiredDoorPower,
+                        doorType = el.doorType
                     };
                     currentLevelData.elements.Add(toSave);
                 }

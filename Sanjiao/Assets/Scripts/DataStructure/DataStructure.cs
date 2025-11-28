@@ -10,6 +10,12 @@ namespace Game.Data
         right
     }
 
+    public enum DoorType
+    {
+        BeginDoor, // 起点门（装饰、不可交互）
+        EndDoor    // 终点门（原有逻辑）
+    }
+    
     // 标识格子上的物体类型
     public enum GridObjectType
     {

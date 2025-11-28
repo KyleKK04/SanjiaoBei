@@ -19,6 +19,9 @@ namespace Game.Data
 
         [Tooltip("大门开启所需的最小咏唱等级 (仅对 Door 有效)")]
         public int requiredDoorPower = 3; // 默认为3
+        
+        // 【新增】门的类型 (仅对 Door 有效)
+        public DoorType doorType = DoorType.EndDoor; 
     }
 
     // 关卡数据容器 (ScriptableObject)
