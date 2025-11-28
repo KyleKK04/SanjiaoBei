@@ -74,8 +74,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 2747690628134850419, guid: b670ab75dde984907b8570040daa08c5, type: 3}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 2207b7078bfc5bc4ead18817d312283f, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -104,3 +104,12 @@ MonoBehaviour:
   gridObjectType: 0
   isBlockingMovement: 0
   isMovable: 0
+  UpSripte: {fileID: 21300000, guid: 4d19b08aca58fd240aca29173376c099, type: 3}
+  DownSprite: {fileID: 21300000, guid: 2207b7078bfc5bc4ead18817d312283f, type: 3}
+  LeftSprite: {fileID: 21300000, guid: bedfcaed44199664aa2908eb1d0948a4, type: 3}
+  RightSprite: {fileID: 21300000, guid: 57b05f461f80fee449fa60476d575f21, type: 3}
+  DestroyedSprite: {fileID: 21300000, guid: 81f954d5260a27c4294de1a5d4dbc48c, type: 3}
+  SpottedUpSprite: {fileID: 21300000, guid: cf77a6373a2684b498e1c08c8d3936e6, type: 3}
+  SpottedDownSprite: {fileID: 21300000, guid: 5e53559e67a4d50479a3a4a32c899da8, type: 3}
+  SpottedLeftSprite: {fileID: 21300000, guid: 7bcb980349e0616488fae06322eefa99, type: 3}
+  SpottedRightSprite: {fileID: 21300000, guid: 3d3fa4295fd2f5646afe3f5c1cd3bef3, type: 3}

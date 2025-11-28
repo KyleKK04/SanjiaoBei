@@ -26,7 +26,6 @@ namespace Game.Data
             if(Game.Core.LevelManager.Instance != null) size = Game.Core.LevelManager.Instance.cellSize;
             
             transform.position = new Vector3(x * size, y * size, 0);
-            UpdateVisualRotation();
         }
 
         public virtual void Interact() { }
@@ -57,7 +56,7 @@ namespace Game.Data
 
         protected void UpdateVisualRotation()
         {
-            // 简单的 Z 轴旋转实现
+            /*// 简单的 Z 轴旋转实现
             float angle = 0;
             switch (direction)
             {
@@ -66,7 +65,7 @@ namespace Game.Data
                 case Direction.down: angle = 180; break;
                 case Direction.right: angle = -90; break;
             }
-            transform.rotation = Quaternion.Euler(0, 0, angle);
+            transform.rotation = Quaternion.Euler(0, 0, angle);*/
         }
         
         // 销毁自身并清理网格引用

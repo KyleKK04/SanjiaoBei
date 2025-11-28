@@ -17,6 +17,11 @@ namespace Game.Core
         private bool isMoving = false;
         private Vector3 targetPosition;
 
+        public Sprite UpSprite;
+        public Sprite DownSprite;
+        public Sprite LeftSprite;
+        public Sprite RightSprite;
+
         void Awake()
         {
             isBlockingMovement = true;
@@ -61,7 +66,6 @@ namespace Game.Core
                 if (direction != inputDir.Value)
                 {
                     direction = inputDir.Value;
-                    UpdateVisualRotation();
                     return;
                 }
 
@@ -127,32 +131,28 @@ namespace Game.Core
             
             if (target != null) 
             {
-                // 【逻辑修改】如果是雕像，直接让它转过来面向玩家
-                if (target.gridObjectType == GridObjectType.Statue)
-                {
-                    // 玩家面朝 (x, y)，雕像就要面朝 (-x, -y) 才能对视
-                    Vector2Int facePlayerVec = new Vector2Int(-dirVec.x, -dirVec.y);
-                    
-                    // 修改数据
-                    target.direction = Vector2IntToDirection(facePlayerVec);
-                    
-                    // 刷新视觉 (使用 SendMessage 调用 protected 方法)
-                    target.SendMessage("UpdateVisualRotation", SendMessageOptions.DontRequireReceiver);
-                    
-                    Debug.Log($"已将前方雕像 ({targetX},{targetY}) 转向面向玩家。");
-                }
-                else
-                {
-                    // 如果是大门或其他物体，保持调用 Interact() 接口 (用于触发通关等)
-                    target.Interact();
-                }
+                target.Interact();
+                Debug.Log("交互成功 with " + target.gridObjectType.ToString());
             }
         }
 
         private void UpdateAnimation()
         {
-            if (anim == null) return;
-            anim.SetBool("IsMoving", isMoving);
+            switch (direction)
+            {
+                case Direction.up:
+                    spriteRenderer.sprite = UpSprite;
+                    break;
+                case Direction.down:
+                    spriteRenderer.sprite = DownSprite;
+                    break;
+                case Direction.left:
+                    spriteRenderer.sprite = LeftSprite;
+                    break;
+                case Direction.right:
+                    spriteRenderer.sprite = RightSprite;
+                    break;
+            }
         }
     }
 }

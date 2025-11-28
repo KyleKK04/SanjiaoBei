@@ -7,10 +7,10 @@ using UnityEngine.UI;
 [System.Serializable]
 public struct TextDisplay
 {
-    public TextAsset textFile;//ÎÄ±¾ÎÄ¼şÒıÓÃ
+    public TextAsset textFile;
 
-    public Text uiTextBox;//UIÎÄ±¾¿òÒıÓÃ
-    public GameObject textPanel;//ÏÔÊ¾/Òş²ØÎÄ±¾Ãæ°å
+    public Text uiTextBox;
+    public GameObject textPanel;
     public Text textLabel;
 
     public int index;
@@ -21,7 +21,7 @@ public struct TextDisplay
     public List<string> textList;
 
 
-    public void Initialize()//³õÊ¼»¯
+    public void Initialize()
     {
         textList = new List<string>();
         index = 0;
@@ -34,7 +34,7 @@ public struct TextDisplay
         GetText(textFile);
     }
 
-    void GetText(TextAsset file)//»ñÈ¡ÎÄ±¾
+    void GetText(TextAsset file)
     {
         textList.Clear();
         index = 0;
@@ -49,11 +49,11 @@ public struct TextDisplay
         }
     }
 
-    public bool AdvanceText()//ÍÆ½øÎÄ±¾
+    public bool AdvanceText()
     {
         if (textFinished && index >= textList.Count)
         {
-            // ÎÄ±¾ÏÔÊ¾Íê±Ï
+            // ï¿½Ä±ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½
             if (textPanel != null)
                 textPanel.SetActive(false);
 
@@ -62,20 +62,20 @@ public struct TextDisplay
             if (textLabel != null)
                 textLabel.text = "";
 
-            return true; // ÎÄ±¾½áÊø
+            return true; 
         }
         else if (textFinished && index < textList.Count)
         {
-            return false; // ĞèÒª¼ÌĞøÏÔÊ¾ÏÂÒ»¾ä
+            return false; //
         }
         else
         {
             cancelTyping = true;
-            return false; // ÕıÔÚÏÔÊ¾ÖĞ
+            return false; //
         }
     }
 
-    IEnumerator SetTextUI()//ÉèÖÃÎÄ±¾UI
+    IEnumerator SetTextUI()//
     {
         textFinished = false;
         if (textLabel != null)
@@ -98,7 +98,7 @@ public struct TextDisplay
         index++;
     }
 
-    public void StartDisplay()//¿ªÊ¼ÏÔÊ¾
+    public void StartDisplay()//
     {
         if (textPanel != null)
             textPanel.SetActive(true);
@@ -107,7 +107,7 @@ public struct TextDisplay
 
     }
 
-    public void EndDisplay()//½áÊøÏÔÊ¾
+    public void EndDisplay()//
     {
         if (textPanel != null)
             textPanel.SetActive(false);
