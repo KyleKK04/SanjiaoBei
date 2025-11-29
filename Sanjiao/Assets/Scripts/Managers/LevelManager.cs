@@ -12,7 +12,6 @@ namespace Game.Core
         [Header("Levels Configuration")] [Tooltip("将所有的 LevelSO 拖拽到这里")]
         public List<LevelSO> levels = new List<LevelSO>();
 
-        // 当前正在运行的关卡数据（内部使用）
         private LevelSO currentLevelData;
         private int currentLevelIndex = 0;
 
@@ -24,18 +23,17 @@ namespace Game.Core
         public GameObject doorPrefab;
         public GameObject playerPrefab;
         public GameObject chantPrefab;
-        public GameObject backgroundPrefab;
 
-        [Header("Settings")] public float cellSize = 1f; // 网格单元大小
+        [Header("Background Settings")] public GameObject backgroundPrefab; // 背景预制体
+        private GameObject currentBackgroundInstance; // 【新增】当前场景中的背景实例引用
 
-        // 【新增】摄像机纵向偏移量：正数会让摄像机上移（格子看起来下移）
+        [Header("Settings")] public float cellSize = 1f;
         public float cameraOffsetY = 3f;
 
-        // 运行时网格数据
         private GridObject[,] gridMap;
         private int width;
         private int height;
-        public PlayerMovement playerInstance; // 玩家实例引用
+        public PlayerMovement playerInstance;
 
         private void Awake()
         {
@@ -45,24 +43,21 @@ namespace Game.Core
 
         private void Start()
         {
-            // 测试时默认读取第一关
-            if (levels.Count > 0)
+            /*if (levels.Count > 0)
             {
                 LoadLevel(0);
             }
             else
             {
-                Debug.LogError("LevelManager: 没有在 Inspector 中配置任何关卡 (Levels 列表为空)！");
-            }
+                Debug.LogError("LevelManager: Levels list is empty!");
+            }*/
         }
-
-        // --- 关卡加载核心逻辑 ---
 
         public void LoadLevel(int index)
         {
             if (index < 0 || index >= levels.Count)
             {
-                Debug.LogError($"LevelManager: 尝试加载无效的关卡索引 {index}");
+                Debug.LogError($"LevelManager: Invalid level index {index}");
                 return;
             }
 
@@ -73,7 +68,10 @@ namespace Game.Core
 
             GenerateLevel();
 
-            Debug.Log($"LevelManager: 已加载关卡 {index} - {currentLevelData.levelName}");
+            // 生成完关卡后，调整相机和背景
+            CenterCameraAndBackground();
+
+            Debug.Log($"LevelManager: Loaded Level {index}");
         }
 
         public void LoadNextLevel()
@@ -85,8 +83,7 @@ namespace Game.Core
             }
             else
             {
-                Debug.Log("LevelManager: 已经是最后一关了，恭喜通关游戏！");
-                // TODO: 调用通关UI
+                Debug.Log("LevelManager: Game Cleared!");
             }
         }
 
@@ -95,13 +92,23 @@ namespace Game.Core
             LoadLevel(currentLevelIndex);
         }
 
-        private void ClearCurrentLevel()
+        public void ClearCurrentLevel()
         {
+            // 1. 清理网格物体
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 Destroy(transform.GetChild(i).gameObject);
             }
 
+            // 2. 【新增】清理背景
+            if (currentBackgroundInstance != null)
+            {
+                Destroy(currentBackgroundInstance);
+                currentBackgroundInstance = null;
+            }
+
+            // 3. 清理特效和引用
+            StopChant(); // 确保停止之前的协程和特效
             gridMap = null;
             playerInstance = null;
         }
@@ -114,7 +121,9 @@ namespace Game.Core
             height = currentLevelData.mapSize.y;
             gridMap = new GridObject[width, height];
 
-            // 1. 铺地面
+            // --- 1. 临时存储生成的地面物体，方便后续删除 ---
+            GameObject[,] groundObjects = new GameObject[width, height];
+
             if (groundPrefab != null)
             {
                 for (int x = 0; x < width; x++)
@@ -125,40 +134,59 @@ namespace Game.Core
                         groundObj.transform.position = new Vector3(x * cellSize, y * cellSize, 0);
                         SpriteRenderer sr = groundObj.GetComponent<SpriteRenderer>();
                         if (sr != null) sr.sortingOrder = -10;
+
+                        // 存入临时数组
+                        groundObjects[x, y] = groundObj;
                     }
                 }
             }
 
-            // 2. 生成物体
+            // --- 2. 生成物体 ---
             foreach (var element in currentLevelData.elements)
             {
                 if (!currentLevelData.IsCoordinateInBounds(element.position)) continue;
 
                 GameObject prefabToSpawn = null;
-                switch (element.type)
+
+                // 【新增逻辑】如果是墙壁，且该位置有地面，则销毁地面
+                if (element.type == GridObjectType.Wall)
                 {
-                    case GridObjectType.Wall: prefabToSpawn = wallPrefab; break;
-                    case GridObjectType.Statue: prefabToSpawn = statuePrefab; break;
-                    case GridObjectType.GhostStatue: prefabToSpawn = evilStatuePrefab; break;
-                    case GridObjectType.Scroll: prefabToSpawn = scrollPrefab; break;
-                    case GridObjectType.Door: prefabToSpawn = doorPrefab; break;
+                    int gx = element.position.x;
+                    int gy = element.position.y;
+                    if (groundObjects[gx, gy] != null)
+                    {
+                        Destroy(groundObjects[gx, gy]);
+                        groundObjects[gx, gy] = null;
+                    }
 
-                    case GridObjectType.SpawnPoint:
-                        if (playerInstance == null && playerPrefab != null)
-                        {
-                            GameObject p = Instantiate(playerPrefab, transform);
-                            playerInstance = p.GetComponent<PlayerMovement>();
-                        }
+                    prefabToSpawn = wallPrefab;
+                }
+                else
+                {
+                    // 其他类型的物体 (保持原样)
+                    switch (element.type)
+                    {
+                        // case GridObjectType.Wall: ... (上面已经处理了)
+                        case GridObjectType.Statue: prefabToSpawn = statuePrefab; break;
+                        case GridObjectType.GhostStatue: prefabToSpawn = evilStatuePrefab; break;
+                        case GridObjectType.Scroll: prefabToSpawn = scrollPrefab; break;
+                        case GridObjectType.Door: prefabToSpawn = doorPrefab; break;
+                        case GridObjectType.SpawnPoint:
+                            if (playerInstance == null && playerPrefab != null)
+                            {
+                                GameObject p = Instantiate(playerPrefab, transform);
+                                playerInstance = p.GetComponent<PlayerMovement>();
+                            }
 
-                        if (playerInstance != null)
-                        {
-                            playerInstance.Init(element.position.x, element.position.y, element.initialFacing);
-                            UpdateGrid(element.position.x, element.position.y, playerInstance);
-                        }
+                            if (playerInstance != null)
+                            {
+                                playerInstance.Init(element.position.x, element.position.y, element.initialFacing);
+                                UpdateGrid(element.position.x, element.position.y, playerInstance);
+                            }
 
-                        continue;
-
-                    default: continue;
+                            continue;
+                        default: continue;
+                    }
                 }
 
                 if (prefabToSpawn != null)
@@ -169,19 +197,13 @@ namespace Game.Core
                     if (gridObj != null)
                     {
                         gridObj.Init(element.position.x, element.position.y, element.initialFacing);
-                        // 【修改】针对门进行特殊初始化
                         if (gridObj is DoorController door)
-                        {
-                            // 传入等级和类型
                             door.SetDoorData(element.requiredDoorPower, element.doorType);
-                        }
 
-                        // 如果是卷轴，如果LevelSO里配了文本，可以这里赋值
                         if (gridObj is ScrollController scroll &&
                             !string.IsNullOrEmpty(currentLevelData.scrollDialogue))
                         {
-                            // 如果你想用 SO 里的 scrollDialogue 覆盖卷轴自带的文本，可以在这赋值
-                            // scroll.SetTextContent(currentLevelData.scrollDialogue);
+                            // scroll.SetTextContent...
                         }
 
                         UpdateGrid(element.position.x, element.position.y, gridObj);
@@ -189,29 +211,49 @@ namespace Game.Core
                 }
             }
 
-            // 3. 调整摄像机对准地图中心
-            CenterCamera();
+            // 3. 调整摄像机
+            CenterCameraAndBackground();
         }
 
-        private void CenterCamera()
+        // 【修改】重命名并完善逻辑：同时调整相机中心和背景位置
+        private void CenterCameraAndBackground()
         {
-// 1. 计算原本的地图几何中心
+            // 1. 计算地图的几何中心点
             float centerX = (width - 1) * cellSize / 2f;
             float centerY = (height - 1) * cellSize / 2f;
 
-            // 2. 施加偏移量
-            // 如果你想让格子视觉上“往下移”，摄像机就需要“往上移” (+Y)
+            // 2. 计算相机的目标位置（带偏移）
             float targetCamY = centerY + cameraOffsetY;
+            Vector3 cameraTargetPos = new Vector3(centerX, targetCamY, -10f);
 
-            // 3. 设置摄像机位置
-            Camera.main.transform.position = new Vector3(centerX, targetCamY, -10f);
+            // 3. 设置相机
+            if (Camera.main != null)
+            {
+                Camera.main.transform.position = cameraTargetPos;
+            }
+            else
+            {
+                Debug.LogWarning("LevelManager: 场景中找不到 Tag 为 MainCamera 的摄像机！");
+            }
 
-            // 4. 设置背景位置 (通常背景跟随摄像机中心)
+            // 4. 【新增】生成并设置背景
             if (backgroundPrefab != null)
             {
-                backgroundPrefab.transform.position = new Vector3(centerX, targetCamY, 0f);
+                // 如果当前还没有背景实例，就生成一个
+                if (currentBackgroundInstance == null)
+                {
+                    // 生成时不要设为 transform 的子物体，防止被 ClearCurrentLevel 里的 transform.GetChild 误删（虽然我们在 Clear 里单独处理了）
+                    // 建议保持独立，或者确保 Clear 逻辑正确
+                    currentBackgroundInstance = Instantiate(backgroundPrefab);
+                }
+
+                // 将背景放置在相机正对的位置，但在 Z 轴上要远离相机 (Z=0 或 Z=5)
+                // 假设物体在 Z=0，背景应该在 Z=10 (更远) 或者 Z=0 但 SortingLayer 很低
+                currentBackgroundInstance.transform.position = new Vector3(centerX, targetCamY, 10f);
             }
         }
+
+        // ... (以下辅助方法保持不变) ...
 
         public void UpdateGrid(int x, int y, GridObject obj)
         {
@@ -235,14 +277,12 @@ namespace Game.Core
 
             GridObject targetObj = gridMap[targetPos.x, targetPos.y];
 
-            // 1. 空地
             if (targetObj == null || targetObj.gridObjectType == GridObjectType.Ground)
             {
                 MoveObjectInGrid(player, currentPos, targetPos);
                 return true;
             }
 
-            // 2. 阻挡物 (墙、门、恶鬼)
             if (targetObj.isBlockingMovement)
             {
                 if (targetObj.gridObjectType == GridObjectType.Statue)
@@ -253,22 +293,20 @@ namespace Game.Core
                 return false;
             }
 
-            // 3. 卷轴 (特殊处理：允许移动上去，并触发拾取)
             if (targetObj.gridObjectType == GridObjectType.Scroll)
             {
-                // 【新增】触发卷轴收集逻辑
-                ScrollController scroll = targetObj as ScrollController;
-                if (scroll != null)
-                {
-                    scroll.OnCollected();
-                }
-
-                // 玩家覆盖到卷轴的位置上 (卷轴在网格数据中被玩家顶替)
+                ((ScrollController)targetObj).OnCollected();
                 MoveObjectInGrid(player, currentPos, targetPos);
                 return true;
             }
 
-            return false;
+            if (targetObj.gridObjectType == GridObjectType.Door && !targetObj.isBlockingMovement)
+            {
+                MoveObjectInGrid(player, currentPos, targetPos);
+                return true;
+            }
+
+            return true;
         }
 
         private bool TryPushStatue(StatueController statue, Direction pushDir, PlayerMovement player)
@@ -283,9 +321,11 @@ namespace Game.Core
             if (objBehindStatue == null || objBehindStatue.gridObjectType == GridObjectType.Ground)
             {
                 MoveObjectInGrid(statue, statueCurrent, statueTarget);
-                statue.OnPush(pushDir);
-
                 MoveObjectInGrid(player, player.gridCoordinates, statueCurrent);
+
+                float pushTime = player.pushDuration;
+                Vector3 targetWorldPos = new Vector3(statueTarget.x * cellSize, statueTarget.y * cellSize, 0);
+                statue.OnPush(targetWorldPos, pushTime);
                 return true;
             }
 
@@ -297,30 +337,37 @@ namespace Game.Core
             if (IsBounds(oldPos.x, oldPos.y) && gridMap[oldPos.x, oldPos.y] == obj)
                 gridMap[oldPos.x, oldPos.y] = null;
 
+            GridObject targetObj = null;
+            if (IsBounds(newPos.x, newPos.y))
+                targetObj = gridMap[newPos.x, newPos.y];
+
             if (IsBounds(newPos.x, newPos.y))
                 gridMap[newPos.x, newPos.y] = obj;
 
             obj.gridCoordinates = newPos;
+
+            if (obj.gridObjectType == GridObjectType.Player)
+            {
+                if (targetObj != null && targetObj.gridObjectType == GridObjectType.Door &&
+                    !targetObj.isBlockingMovement)
+                {
+                    Debug.Log("Player entered the door!");
+                    GameManager.Instance.WinLevel();
+                }
+            }
         }
 
-        // 【新增】用于存储当前存在的所有咏唱特效物体
         private List<GameObject> activeChantEffects = new List<GameObject>();
 
-        // 1. 开始咏唱
         public void CastChant(GridCoordinates startPos, Direction startDir)
         {
-            // 为了安全，先清理一次（防止快速连按导致的残留）
             StopChant();
             StartCoroutine(PropagateChant(startPos, startDir));
         }
 
-        // 2. 【新增】停止咏唱 (供 PlayerMovement 的 KeyUp 调用)
         public void StopChant()
         {
-            // 停止生成协程（如果波还在传，立即打断）
             StopAllCoroutines();
-
-            // 销毁所有特效物体
             foreach (var effect in activeChantEffects)
             {
                 if (effect != null) Destroy(effect);
@@ -329,71 +376,54 @@ namespace Game.Core
             activeChantEffects.Clear();
         }
 
-        // 3. 修改传播协程
         IEnumerator PropagateChant(GridCoordinates startPos, Direction startDir)
         {
             int power = 1;
             Direction currentDir = startDir;
             GridCoordinates currentPos = startPos;
-
             float stepDelay = 0.15f;
+            bool isFirstStep = true;
 
             int safety = 0;
             while (safety < 50)
             {
                 safety++;
+                GridObject currentObj = GetGridObject(currentPos.x, currentPos.y);
+                GridCoordinates nextPos = GetNextCoord(currentPos, currentDir);
+                GridObject nextObj = GetGridObject(nextPos.x, nextPos.y);
 
-                // --- 生成特效并加入列表 ---
-                if (chantPrefab != null)
+                bool isCurrentBlocking = currentObj != null && currentObj.isBlockingMovement;
+                bool isNextBlocking = !IsBounds(nextPos.x, nextPos.y);
+                if (!isNextBlocking && nextObj != null && nextObj.isBlockingMovement) isNextBlocking = true;
+
+                if (chantPrefab != null && !isCurrentBlocking)
                 {
                     Vector3 spawnPos = new Vector3(currentPos.x * cellSize, currentPos.y * cellSize, 0);
                     GameObject effect = Instantiate(chantPrefab, spawnPos, Quaternion.identity);
-
-                    // 计算旋转
-                    float angle = 0f;
-                    switch (currentDir)
-                    {
-                        case Direction.up: angle = 0f; break;
-                        case Direction.left: angle = 90f; break;
-                        case Direction.down: angle = 180f; break;
-                        case Direction.right: angle = -90f; break;
-                    }
-
-                    effect.transform.rotation = Quaternion.Euler(0, 0, angle);
-
-                    // 【关键】加入列表进行管理
+                    ChantEffectController controller = effect.GetComponent<ChantEffectController>();
+                    if (controller != null) controller.Init(currentDir, isFirstStep, isNextBlocking);
                     activeChantEffects.Add(effect);
                 }
-                // ---------------------------
 
-                GridObject obj = GetGridObject(currentPos.x, currentPos.y);
-                if (obj != null)
+                if (currentObj != null)
                 {
-                    obj.OnChant(power, currentDir);
-
-                    if (obj.gridObjectType == GridObjectType.Statue)
+                    currentObj.OnChant(power, currentDir);
+                    if (currentObj.gridObjectType == GridObjectType.Statue)
                     {
-                        currentDir = obj.direction;
+                        currentDir = currentObj.direction;
                         power++;
                     }
-                    else if (obj.gridObjectType == GridObjectType.Wall)
-                    {
-                        break;
-                    }
-                    else if (obj.gridObjectType == GridObjectType.GhostStatue)
+                    else if (currentObj.gridObjectType == GridObjectType.Wall) break;
+                    else if (currentObj.gridObjectType == GridObjectType.GhostStatue)
                     {
                         if (power < 3) break;
                     }
-                    else if (obj.gridObjectType == GridObjectType.Door)
-                    {
-                        break;
-                    }
+                    else if (currentObj.gridObjectType == GridObjectType.Door) break;
                 }
 
                 currentPos = GetNextCoord(currentPos, currentDir);
-
                 if (!IsBounds(currentPos.x, currentPos.y)) break;
-
+                isFirstStep = false;
                 yield return new WaitForSeconds(stepDelay);
             }
         }
@@ -407,17 +437,12 @@ namespace Game.Core
                 watchdog++;
                 pos = GetNextCoord(pos, dir);
                 if (!IsBounds(pos.x, pos.y)) return false;
-
                 if (pos.x == target.x && pos.y == target.y) return true;
-
                 GridObject obj = GetGridObject(pos.x, pos.y);
                 if (obj != null && (obj.gridObjectType == GridObjectType.Wall ||
                                     obj.gridObjectType == GridObjectType.Statue ||
                                     obj.gridObjectType == GridObjectType.Door ||
-                                    obj.gridObjectType == GridObjectType.GhostStatue))
-                {
-                    return false;
-                }
+                                    obj.gridObjectType == GridObjectType.GhostStatue)) return false;
             }
 
             return false;
@@ -434,6 +459,11 @@ namespace Game.Core
             }
 
             return cur;
+        }
+
+        public int GetCurrentLevelIndex()
+        {
+            return currentLevelIndex;
         }
     }
 }

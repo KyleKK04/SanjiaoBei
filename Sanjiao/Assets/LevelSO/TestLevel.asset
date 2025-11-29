@@ -27,13 +27,6 @@ MonoBehaviour:
     requiredDoorPower: 3
     doorType: 1
   - position:
-      x: 4
-      y: 8
-    type: 5
-    initialFacing: 1
-    requiredDoorPower: 3
-    doorType: 1
-  - position:
       x: 5
       y: 5
     type: 3
@@ -45,13 +38,20 @@ MonoBehaviour:
       y: 2
     type: 6
     initialFacing: 1
-    requiredDoorPower: 3
+    requiredDoorPower: 1
     doorType: 1
   - position:
       x: 6
       y: 6
     type: 3
-    initialFacing: 2
+    initialFacing: 1
+    requiredDoorPower: 3
+    doorType: 1
+  - position:
+      x: 7
+      y: 6
+    type: 5
+    initialFacing: 1
     requiredDoorPower: 3
     doorType: 1
   - position:

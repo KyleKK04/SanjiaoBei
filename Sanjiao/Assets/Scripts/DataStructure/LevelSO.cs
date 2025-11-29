@@ -35,6 +35,9 @@ namespace Game.Data
         [Header("Level Configuration")] 
         public string levelName;
 
+        [Tooltip("该关卡是否默认解锁（例如第一关应勾选）")]
+        public bool isUnlocked = false; // 【新增】解锁状态
+        
         [TextArea] public string startDialogue;
         [TextArea] public string scrollDialogue;
 

@@ -1,20 +1,26 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Game;
+using Game.Utilities;
 
 namespace Game.Core
 {
-    public class GameManager : MonoBehaviour
+    public class GameManager : Singleton<GameManager>
     {
-        public static GameManager Instance;
 
         public bool HasScroll { get; private set; } = false;
 
-        private void Awake()
+        private void Start()
         {
-            if (Instance == null) Instance = this;
-            else Destroy(gameObject);
+            GameStart();
+        }
+
+        public void GameStart()
+        {
+            Debug.Log("调用开始界面");
+            UIManager.Instance.OpenPanel("Start");
         }
 
         public void CollectScroll()
@@ -32,7 +38,34 @@ namespace Game.Core
         public void WinLevel()
         {
             Debug.Log("VICTORY: 关卡通过！");
-            // TODO: 弹出胜利UI，加载下一关
+            
+            // 1. 解锁下一关
+            if (LevelManager.Instance != null)
+            {
+                int currentIndex = LevelManager.Instance.GetCurrentLevelIndex();
+                int nextIndex = currentIndex + 1;
+                
+                // 尝试解锁下一关
+                UnlockLevel(nextIndex);
+                
+                // 2. 加载下一关
+                // 如果你想做结算面板，可以在这里暂停，让玩家点“下一关”按钮再加载
+                LevelManager.Instance.LoadNextLevel();
+            }
+        }
+        
+        public void UnlockLevel(int levelIndex)
+        {
+            if (LevelManager.Instance == null) return;
+            
+            // 检查索引是否有效
+            if (levelIndex >= 0 && levelIndex < LevelManager.Instance.levels.Count)
+            {
+                // 直接修改 SO 的数据
+                LevelManager.Instance.levels[levelIndex].isUnlocked = true;
+                
+                Debug.Log($"GameManager: 关卡 {levelIndex} 已解锁！");
+            }
         }
     }
 }

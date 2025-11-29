@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 using Game.Core;
 
@@ -46,15 +47,9 @@ namespace Game.Data
         }
 
         // 当被 LevelManager 推动时调用此方法更新视觉
-        public void OnPush(Direction pushDir)
+        public void OnPush(Vector3 targetPos, float duration)
         {
-            float size = LevelManager.Instance.cellSize;
-            // 这里的 gridCoordinates 已经被 Manager 更新过了
-            Vector3 targetPos = new Vector3(gridCoordinates.x * size, gridCoordinates.y * size, 0);
-            
-            // 简单处理：直接瞬移或使用协程平滑移动
-            // 为了代码简洁这里直接设置位置，建议在 Update 中用插值实现平滑
-            transform.position = targetPos; 
+            transform.DOMove(targetPos, duration).SetEase(Ease.Linear);
         }
 
         public override void OnChant(int powerLevel, Direction inputDir)

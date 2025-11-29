@@ -16,6 +16,7 @@ MonoBehaviour:
     x: 10
     y: 10
   levelName: 07
+  isUnlocked: 0
   startDialogue: 
   scrollDialogue: 
   elements:

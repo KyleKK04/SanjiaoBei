@@ -1,6 +1,8 @@
-using System.Collections; // 必须引入，用于协程
+using System.Collections;
+using DG.Tweening; // 必须引入，用于协程
 using Game.Core;
 using Game.Data;
+using UnityEditor.Tilemaps;
 using UnityEngine;
 
 namespace Game.Core
@@ -10,7 +12,10 @@ namespace Game.Core
         private Animator anim;
         private SpriteRenderer spriteRenderer;
 
-        private float moveSpeed = 20f;
+        [Tooltip("普通移动一格所需时间 (越小越快)")]
+        public float moveDuration = 0.15f; 
+        [Tooltip("推动雕像一格所需时间 (越慢越有重量感)")]
+        public float pushDuration = 0.4f; 
         public bool useSmoothMovement = true;
 
         private bool isMoving = false;
@@ -70,7 +75,6 @@ namespace Game.Core
                 HandleInput();
             }
             UpdateAnimation();
-            HandleMovement();
         }
 
         private void HandleInput()
@@ -113,14 +117,14 @@ namespace Game.Core
                     if (isTargetStatue)
                     {
                         isPushing = true;
+                        MoveTo(targetPosition, pushDuration);
+                    }
+                    else
+                    {
+                        isPushing = false;
+                        MoveTo(targetPosition, moveDuration);
                     }
 
-                    if (!useSmoothMovement)
-                    {
-                        transform.position = targetPosition;
-                        isMoving = false;
-                        isPushing = false; // 瞬移的话瞬间结束推动
-                    }
                 }
             }
 
@@ -143,14 +147,22 @@ namespace Game.Core
             {
                 TryInteract();
             }
+
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                LevelManager.Instance?.RestartLevel();
+            }
         }
 
-        private void HandleMovement()
+        /*private void HandleMovement()
         {
             if (isMoving && useSmoothMovement)
             {
-                transform.position =
-                    Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+                // 【核心修改】根据当前是否在推东西，决定移动速度
+                // 如果在推，用较慢的 pushSpeed，否则用较快的 moveSpeed
+                float currentSpeed = isPushing ? pushSpeed : moveSpeed;
+
+                transform.position = Vector3.MoveTowards(transform.position, targetPosition, currentSpeed * Time.deltaTime);
 
                 if (Vector3.Distance(transform.position, targetPosition) < 0.001f)
                 {
@@ -159,6 +171,17 @@ namespace Game.Core
                     isPushing = false; // 移动结束，停止推动姿态
                 }
             }
+        }*/
+        
+        private void MoveTo(Vector3 targetPos, float duration)
+        {
+            isMoving = true;
+            transform.DOMove(targetPos, duration)
+                .SetEase(Ease.Linear) // 线性移动最适合格子游戏
+                .OnComplete(() => {
+                    isMoving = false;
+                    isPushing = false; // 移动结束后退出推动姿态
+                });
         }
 
         private void TryInteract()

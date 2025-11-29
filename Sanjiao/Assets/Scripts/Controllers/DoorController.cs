@@ -1,6 +1,9 @@
 
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
+using DG.Tweening;
+using TMPro;
 
 namespace Game.Data
 {
@@ -9,6 +12,9 @@ namespace Game.Data
         public int requiredPower = 3;
         public DoorType doorType = DoorType.EndDoor; // 【新增】
         private bool isPowered = false;
+        public List<SpriteRenderer> doorSprites;
+        public List<Sprite> nubmerSprites; // 用于显示数字的Sprite列表
+        public Sprite openSprite;
 
         public void SetDoorData(int power, DoorType type)
         {
@@ -22,6 +28,9 @@ namespace Game.Data
             base.Init(x, y, dir);
             gridObjectType = GridObjectType.Door;
             isBlockingMovement = true; // 两种门都阻挡移动
+            //拿出doorSprites中的数字sprite
+            var numberSprite = doorSprites[1];
+            numberSprite.sprite = nubmerSprites[requiredPower-1];
         }
 
         public override void OnChant(int powerLevel, Direction inputDir)
@@ -33,7 +42,6 @@ namespace Game.Data
                 {
                     isPowered = true;
                     Debug.Log("End Door Powered Up!");
-                    GetComponent<SpriteRenderer>().color = Color.yellow;
                 }
             }
             else
@@ -50,7 +58,19 @@ namespace Game.Data
             {
                 if (GameManager.Instance.HasScroll && isPowered)
                 {
-                    LevelManager.Instance.LoadNextLevel(); 
+                    //使Door缓慢透明并消失并不再BlockMovement
+                    foreach (SpriteRenderer sprite in doorSprites)
+                    {
+                        sprite.DOFade(0, 0.5f);
+                    }
+                    
+                    DOVirtual.DelayedCall(1f, () =>
+                    {
+                        isBlockingMovement = false;
+                        doorSprites[0].sprite = openSprite;
+                        doorSprites[0].DOFade(0.5f, 0.01f);
+                        Debug.Log("End Door Unlocked and Opened!");
+                    });
                 }
                 else
                 {

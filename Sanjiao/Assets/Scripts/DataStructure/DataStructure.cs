@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game.Data
@@ -63,5 +64,22 @@ namespace Game.Data
         {
             return new Vector2Int(x, y);
         }
+    }
+    
+    [System.Serializable]
+    public struct DialogueLine
+    {
+        [Tooltip("对话内容")]
+        [TextArea(3, 5)]
+        public string Content;
+        
+        [Tooltip("角色立绘")]
+        public Sprite CharacterSprite;
+    }
+
+    [System.Serializable]
+    public class DialogueData : ScriptableObject
+    {
+        public List<DialogueLine> lines;
     }
 }
