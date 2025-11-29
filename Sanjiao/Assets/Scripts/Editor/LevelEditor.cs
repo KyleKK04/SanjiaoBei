@@ -11,7 +11,7 @@ namespace Game.EditorTools
         private LevelSO currentLevelData;
         private LevelElement[,] tempMap;
         private GridObjectType selectedType = GridObjectType.Ground;
-        private int mapWidth = 10;
+        private int mapWidth = 15;
         private int mapHeight = 10;
         private Vector2 scrollPosition;
 
@@ -123,7 +123,8 @@ namespace Game.EditorTools
                 if (target.type == GridObjectType.Statue ||
                     target.type == GridObjectType.Wall ||
                     target.type == GridObjectType.Door ||
-                    target.type == GridObjectType.GhostStatue)
+                    target.type == GridObjectType.GhostStatue ||
+                    target.type == GridObjectType.Obstacle) // 【新增】)
                 {
                     break;
                 }
@@ -218,6 +219,12 @@ namespace Game.EditorTools
                 return;
             }
 
+            if (nextType == GridObjectType.Obstacle)
+            {
+                isChantBlocked = true;
+                return;
+            } // 【新增】
+
             // --- 恶鬼雕像 (GhostStatue) ---
             if (nextType == GridObjectType.GhostStatue)
             {
@@ -243,13 +250,12 @@ namespace Game.EditorTools
                 // 只有在【已拾取卷轴】且【强度足够】时，大门才会被激活
                 if (nextElement.doorType == DoorType.EndDoor)
                 {
-                    
-                if (hasCollectedScroll && nextPower >= nextElement.requiredDoorPower)
-                {
-                    Debug.Log($"大门充能成功！(当前:{nextPower}, 需求:{nextElement.requiredDoorPower})");
-                    // 记录该门已被充能
-                    poweredDoors.Add(new Vector2Int(nextPos.x, nextPos.y));
-                }
+                    if (hasCollectedScroll && nextPower >= nextElement.requiredDoorPower)
+                    {
+                        Debug.Log($"大门充能成功！(当前:{nextPower}, 需求:{nextElement.requiredDoorPower})");
+                        // 记录该门已被充能
+                        poweredDoors.Add(new Vector2Int(nextPos.x, nextPos.y));
+                    }
                 }
                 else
                 {
@@ -365,6 +371,7 @@ namespace Game.EditorTools
             if (targetType == GridObjectType.Wall) return;
             if (targetType == GridObjectType.Door) return;
             if (targetType == GridObjectType.GhostStatue) return;
+            if (targetType == GridObjectType.Obstacle) return;
 
             // 虚空检查
             if (targetType == GridObjectType.None)
@@ -477,19 +484,18 @@ namespace Game.EditorTools
                 {
                     if (frontElement.doorType == DoorType.EndDoor)
                     {
-                        
-                    bool isPowered = poweredDoors.Contains(new Vector2Int(frontPos.x, frontPos.y));
-                    if (hasCollectedScroll && isPowered)
-                    {
-                        WinGame();
-                    }
-                    else
-                    {
-                        string tips = "无法打开大门：";
-                        if (!hasCollectedScroll) tips += "[未拾取卷轴] ";
-                        if (!isPowered) tips += "[大门未充能] ";
-                        Debug.Log(tips);
-                    }
+                        bool isPowered = poweredDoors.Contains(new Vector2Int(frontPos.x, frontPos.y));
+                        if (hasCollectedScroll && isPowered)
+                        {
+                            WinGame();
+                        }
+                        else
+                        {
+                            string tips = "无法打开大门：";
+                            if (!hasCollectedScroll) tips += "[未拾取卷轴] ";
+                            if (!isPowered) tips += "[大门未充能] ";
+                            Debug.Log(tips);
+                        }
                     }
                 }
             }
@@ -568,13 +574,24 @@ namespace Game.EditorTools
 
         private void DrawGrid()
         {
+            if (tempMap == null) return;
+
+            // 【核心修复】使用数组的实际长度，而不是 mapWidth/mapHeight 变量
+            // 这样无论你在输入框里填什么数字，只要不点 New/Load，就不会导致绘制越界
+            int actualWidth = tempMap.GetLength(0);
+            int actualHeight = tempMap.GetLength(1);
+
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
             EditorGUILayout.BeginVertical();
-            for (int y = mapHeight - 1; y >= 0; y--)
+
+            // 使用 actualHeight
+            for (int y = actualHeight - 1; y >= 0; y--)
             {
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                for (int x = 0; x < mapWidth; x++)
+
+                // 使用 actualWidth
+                for (int x = 0; x < actualWidth; x++)
                 {
                     DrawCell(x, y);
                 }
@@ -620,8 +637,15 @@ namespace Game.EditorTools
                 else // EndDoor
                 {
                     bool isPowered = isTestMode && poweredDoors.Contains(new Vector2Int(x, y));
-                    if (isPowered) { cellColor = Color.cyan; label += " [ON]"; }
-                    else { label += $"{element.requiredDoorPower}"; }
+                    if (isPowered)
+                    {
+                        cellColor = Color.cyan;
+                        label += " [ON]";
+                    }
+                    else
+                    {
+                        label += $"{element.requiredDoorPower}";
+                    }
                 }
             }
 
@@ -645,6 +669,7 @@ namespace Game.EditorTools
                             element.doorType = brushDoorType;
                             element.requiredDoorPower = brushDoorPower;
                         }
+
                         Event.current.Use();
                     }
                     else if (Event.current.button == 1)
@@ -719,29 +744,61 @@ namespace Game.EditorTools
         private void SaveLevel()
         {
             if (currentLevelData == null) return;
+
+            // 1. 更新 SO 的尺寸数据 (使用输入框里的新数值)
             currentLevelData.mapSize = new GridCoordinates(mapWidth, mapHeight);
             currentLevelData.elements.Clear();
-            for (int x = 0; x < mapWidth; x++)
-            for (int y = 0; y < mapHeight; y++)
+
+            // 获取当前临时数组的实际大小，防止越界
+            int actualArrayWidth = 0;
+            int actualArrayHeight = 0;
+            if (tempMap != null)
             {
-                LevelElement el = tempMap[x, y];
-                if (el.type != GridObjectType.Ground && el.type != GridObjectType.None)
+                actualArrayWidth = tempMap.GetLength(0);
+                actualArrayHeight = tempMap.GetLength(1);
+            }
+
+            // 2. 遍历新的尺寸 (比如 15x10)
+            for (int x = 0; x < mapWidth; x++)
+            {
+                for (int y = 0; y < mapHeight; y++)
                 {
-                    LevelElement toSave = new LevelElement
+                    LevelElement toSave = new LevelElement();
+                    toSave.position = new GridCoordinates(x, y);
+
+                    // 3. 【关键修复】安全检查
+                    // 如果当前的坐标 (x,y) 在旧数组范围内，就保存旧数据
+                    if (x < actualArrayWidth && y < actualArrayHeight && tempMap != null)
                     {
-                        position = new GridCoordinates(x, y),
-                        type = el.type,
-                        initialFacing = el.initialFacing,
-                        requiredDoorPower = el.requiredDoorPower,
-                        doorType = el.doorType
-                    };
+                        LevelElement existing = tempMap[x, y];
+                        toSave.type = existing.type;
+                        toSave.initialFacing = existing.initialFacing;
+                        toSave.requiredDoorPower = existing.requiredDoorPower;
+                        toSave.doorType = existing.doorType;
+                    }
+                    else
+                    {
+                        // 如果坐标超出了旧数组范围 (比如 x=10~14)，则自动填充为默认地面
+                        toSave.type = GridObjectType.Ground;
+                        toSave.initialFacing = Direction.down;
+                        toSave.doorType = DoorType.EndDoor; // 默认值
+                        toSave.requiredDoorPower = 3; // 默认值
+                    }
+
+                    // 添加到 SO 数据列表
                     currentLevelData.elements.Add(toSave);
                 }
             }
 
+            // 4. 标记脏数据并保存资源
             EditorUtility.SetDirty(currentLevelData);
             AssetDatabase.SaveAssets();
-            Debug.Log("Saved.");
+            Debug.Log($"保存成功！地图尺寸已更新为: {mapWidth}x{mapHeight}");
+
+            // 5. 【重要】保存后，重新加载一遍
+            // 这一步会将 tempMap 数组重新初始化为新的 15x10 大小
+            // 从而解决 DrawGrid 和后续操作的显示问题
+            LoadLevel();
         }
 
         private void ToggleTestMode(bool enable)
@@ -782,6 +839,7 @@ namespace Game.EditorTools
             switch (type)
             {
                 case GridObjectType.None: return Color.black;
+                case GridObjectType.Obstacle: return new Color(0.4f, 0.4f, 0.4f); // 深灰
                 case GridObjectType.Ground: return new Color(0.8f, 0.8f, 0.8f);
                 case GridObjectType.Wall: return new Color(0.3f, 0.3f, 0.3f);
                 case GridObjectType.Statue: return Color.cyan;
@@ -814,6 +872,7 @@ namespace Game.EditorTools
                 case GridObjectType.None: return "X";
                 case GridObjectType.Ground: return "";
                 case GridObjectType.Wall: return "█";
+                case GridObjectType.Obstacle: return "OBS";
                 case GridObjectType.Statue: return "S " + arrow;
                 case GridObjectType.GhostStatue: return "E " + arrow;
                 case GridObjectType.Scroll: return "Scr";

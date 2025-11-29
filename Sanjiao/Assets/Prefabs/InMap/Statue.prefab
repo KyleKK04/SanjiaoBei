@@ -108,3 +108,7 @@ MonoBehaviour:
   downSprite: {fileID: 21300000, guid: 0e1a1cca6d36197478d0959e465d0fe4, type: 3}
   leftSprite: {fileID: 21300000, guid: 9a6446fc69266db4a8e1b82deb590215, type: 3}
   rightSprite: {fileID: 21300000, guid: 046cd67b54889a945966eb7056857386, type: 3}
+  chantedUpSprite: {fileID: 21300000, guid: c0fc486f9501ac540be2f198bc9c78b4, type: 3}
+  chantedDownSprite: {fileID: 21300000, guid: cfb81ce787b10204cba2575c1fa8f53e, type: 3}
+  chantedLeftSprite: {fileID: 21300000, guid: 4860ce1d79bab4e478f695881d2983f3, type: 3}
+  chantedRightSprite: {fileID: 21300000, guid: 00c33a12fca44e142a96f4d9e6a875d1, type: 3}

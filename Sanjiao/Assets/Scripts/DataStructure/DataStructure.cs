@@ -29,6 +29,7 @@ namespace Game.Data
         Door,           // 大门
         SpawnPoint,      // 玩家出生点
         Player,          //玩家
+        Obstacle,
         ChantWave      //声音波
     }
 

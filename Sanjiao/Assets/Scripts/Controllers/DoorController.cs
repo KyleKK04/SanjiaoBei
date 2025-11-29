@@ -1,9 +1,9 @@
-
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using DG.Tweening;
 using TMPro;
+using UnityEditor.Rendering;
 
 namespace Game.Data
 {
@@ -15,12 +15,36 @@ namespace Game.Data
         public List<SpriteRenderer> doorSprites;
         public List<Sprite> nubmerSprites; // 用于显示数字的Sprite列表
         public Sprite openSprite;
+        
+        [Header("Dialog Texts")]
+        private List<DialogueLine> level1Dialog = new List<DialogueLine>();
 
         public void SetDoorData(int power, DoorType type)
         {
             requiredPower = power;
             doorType = type;
             // 这里可以根据 type 更换不同的 Sprite，比如起点门是灰色的，终点门是金色的
+            if (doorSprites != null && doorSprites.Count >= 2)
+            {
+                var numberSpriteRenderer = doorSprites[1];
+
+                if (doorType == DoorType.EndDoor)
+                {
+                    // 终点门：显示数字
+                    numberSpriteRenderer.gameObject.SetActive(true); // 确保显示
+                    if (requiredPower > 0 && requiredPower <= nubmerSprites.Count)
+                    {
+                        numberSpriteRenderer.sprite = nubmerSprites[requiredPower - 1];
+                    }
+                    SetText();
+                }
+                else
+                {
+                    // 起点门：隐藏数字图片
+                    numberSpriteRenderer.gameObject.SetActive(false); 
+                    // 或者: numberSpriteRenderer.sprite = null;
+                }
+            }
         }
 
         public override void Init(int x, int y, Direction dir)
@@ -28,9 +52,6 @@ namespace Game.Data
             base.Init(x, y, dir);
             gridObjectType = GridObjectType.Door;
             isBlockingMovement = true; // 两种门都阻挡移动
-            //拿出doorSprites中的数字sprite
-            var numberSprite = doorSprites[1];
-            numberSprite.sprite = nubmerSprites[requiredPower-1];
         }
 
         public override void OnChant(int powerLevel, Direction inputDir)
@@ -64,6 +85,8 @@ namespace Game.Data
                         sprite.DOFade(0, 0.5f);
                     }
                     
+                    ShowDialog();
+                    
                     DOVirtual.DelayedCall(1f, () =>
                     {
                         isBlockingMovement = false;
@@ -81,6 +104,27 @@ namespace Game.Data
             {
                 // 起点门无法交互
                 Debug.Log("This is the entrance (Begin Door), cannot interact.");
+            }
+        }
+
+        private void SetText()
+        {
+            DialogueLine line1 = new DialogueLine();
+            line1.Content = "主啊，我无时无刻地聆听着你。请您告诉我，我将往何处去？";
+            line1.CharacterSprite = DialogueManager.Instance.angel;
+            level1Dialog.Add(line1);
+            
+            DialogueLine line2 = new DialogueLine();
+            line2.Content = "（走向终点大门即可通关。）";
+            line2.CharacterSprite = null;
+            level1Dialog.Add(line2);
+        }
+
+        private void ShowDialog()
+        {
+            if (LevelManager.Instance.GetCurrentLevelIndex() == 0)
+            {
+                DialogueManager.Instance.ShowDialogue(level1Dialog);
             }
         }
     }

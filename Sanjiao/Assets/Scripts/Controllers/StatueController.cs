@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using UnityEngine;
 using Game.Core;
@@ -6,10 +7,17 @@ namespace Game.Data
 {
     public class StatueController : GridObject
     {
+        private bool isChanted = false;
+        
         public Sprite upSprite;
         public Sprite downSprite;
         public Sprite leftSprite;
         public Sprite rightSprite;
+        
+        public Sprite chantedUpSprite;
+        public Sprite chantedDownSprite;
+        public Sprite chantedLeftSprite;
+        public Sprite chantedRightSprite;
         
         private SpriteRenderer spriteRenderer;
         public override void Init(int x, int y, Direction dir)
@@ -43,7 +51,11 @@ namespace Game.Data
                 Debug.Log($"雕像转向了玩家，方向变更为: {this.direction}");
             }
             
-            UpdateAnimation();
+        }
+
+        private void Update()
+        {
+            /*UpdateAnimation();*/
         }
 
         // 当被 LevelManager 推动时调用此方法更新视觉
@@ -55,27 +67,52 @@ namespace Game.Data
         public override void OnChant(int powerLevel, Direction inputDir)
         {
             base.OnChant(powerLevel, inputDir);
-            // 视觉反馈：雕像发光或播放音效
-            Debug.Log($"Statue boosted chant! Power {powerLevel} -> {powerLevel+1}");
+            
+            // 【修改】被击中时设为 true，并刷新图片
+            if (!isChanted)
+            {
+                isChanted = true;
+                UpdateAnimation();
+            }
+        }
+        
+        public void ResetChantState()
+        {
+            if (isChanted)
+            {
+                isChanted = false;
+                UpdateAnimation();
+            }
         }
 
+        public void SetIsChantedTrue()
+        {
+            isChanted = true;
+        }
+        
         private void UpdateAnimation()
         {
+            if (spriteRenderer == null) return;
+
+            Sprite targetSprite = null;
+
             switch (direction)
             {
                 case Direction.up:
-                    spriteRenderer.sprite = upSprite;
+                    targetSprite = isChanted ? chantedUpSprite : upSprite;
                     break;
                 case Direction.down:
-                    spriteRenderer.sprite = downSprite;
+                    targetSprite = isChanted ? chantedDownSprite : downSprite;
                     break;
                 case Direction.left:
-                    spriteRenderer.sprite = leftSprite;
+                    targetSprite = isChanted ? chantedLeftSprite : leftSprite;
                     break;
                 case Direction.right:
-                    spriteRenderer.sprite = rightSprite;
+                    targetSprite = isChanted ? chantedRightSprite : rightSprite;
                     break;
             }
+
+            spriteRenderer.sprite = targetSprite;
         }
     }
 }

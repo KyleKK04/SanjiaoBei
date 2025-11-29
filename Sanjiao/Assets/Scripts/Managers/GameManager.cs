@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using Game;
 using Game.Utilities;
@@ -21,6 +22,7 @@ namespace Game.Core
         {
             Debug.Log("调用开始界面");
             UIManager.Instance.OpenPanel("Start");
+            AudioManager.Instance.PlayBGM("Lobby");
         }
 
         public void CollectScroll()
@@ -29,10 +31,13 @@ namespace Game.Core
             Debug.Log("GameManager: 卷轴已收集");
         }
 
-        public void GameOver(string reason)
+        public async Task GameOver()
         {
-            Debug.LogError($"GAME OVER: {reason}");
-            // TODO: 弹出失败UI，重置关卡等
+            Debug.Log("游戏失败！！！");
+            await UIManager.Instance.OpenPanelAsync("Switch");
+            await Task.Delay(1000);
+            LevelManager.Instance.RestartLevel();
+            await UIManager.Instance.ClosePanelAsync("Switch");
         }
 
         public void WinLevel()

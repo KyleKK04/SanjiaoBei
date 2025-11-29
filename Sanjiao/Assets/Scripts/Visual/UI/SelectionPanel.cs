@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UniRx;
 using DG.Tweening;
@@ -86,9 +87,7 @@ namespace Game.Visual
                     btnComp.OnClickAsObservable()
                         .Subscribe(async _ =>
                         {
-                            await UIManager.Instance?.SwitchPanelAsync("Select", "Switch");
                             LevelManager.Instance.LoadLevel(levelIndex);
-                            await UIManager.Instance?.SwitchPanelAsync("Switch", "InGame");
                         })
                         .AddTo(this);
                 }

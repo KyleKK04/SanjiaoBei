@@ -25,14 +25,14 @@ namespace Game.Data
         private bool cancelTyping = false;
         private List<string> textList = new List<string>();
         private int currentIndex = 0;
-        private List<DialogueLine> dialogueLines = new List<DialogueLine>();
+        private List<DialogueLine> level1DialogueLines = new List<DialogueLine>();
 
         public override void Init(int x, int y, Direction dir)
         {
             base.Init(x, y, dir);
             gridObjectType = GridObjectType.Scroll;
             isBlockingMovement = false; // 允许玩家走上来
-            setText();
+            SetText();
         }
 
 
@@ -50,8 +50,7 @@ namespace Game.Data
                 // 1. 隐藏卷轴图片 (不再在场景中显示)
                 var sr = GetComponent<SpriteRenderer>();
                 if (sr != null) sr.enabled = false;
-                DialogueManager.Instance.ShowDialogue(dialogueLines);
-                
+                ShowDialog();                
                 
             }
         }
@@ -61,15 +60,22 @@ namespace Game.Data
 
         }
 
-
-        private void setText()
+        private void ShowDialog()
         {
-            dialogueLines.Clear(); // 【新增】防止重复添加
+            if (currentIndex == 0)
+            {
+                DialogueManager.Instance.ShowDialogue(level1DialogueLines);
+            }
+        }
+        
+        private void SetText()
+        {
+            level1DialogueLines.Clear(); // 【新增】防止重复添加
             DialogueLine line1 = new DialogueLine();
             line1.Content = "神说，要有光，便有了光。";
             line1.CharacterSprite = null;
-            dialogueLines.Add(line1);
-            Debug.Log($"Scroll Dialogue Init. Count: {dialogueLines.Count}");
+            level1DialogueLines.Add(line1);
+            Debug.Log($"Scroll Dialogue Init. Count: {level1DialogueLines.Count}");
         }
     }
 }

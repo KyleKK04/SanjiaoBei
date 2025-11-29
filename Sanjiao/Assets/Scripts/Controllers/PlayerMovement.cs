@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
 using DG.Tweening; // 必须引入，用于协程
 using Game.Core;
 using Game.Data;
 using UnityEditor.Tilemaps;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Game.Core
 {
@@ -117,6 +119,8 @@ namespace Game.Core
                     if (isTargetStatue)
                     {
                         isPushing = true;
+                        String randomPushSFX = "Pushing" + Random.Range(1, 3).ToString();
+                        AudioManager.Instance.PlaySFX(randomPushSFX);
                         MoveTo(targetPosition, pushDuration);
                     }
                     else
@@ -176,6 +180,8 @@ namespace Game.Core
         private void MoveTo(Vector3 targetPos, float duration)
         {
             isMoving = true;
+            String randomWalkSFX = "Walk" + Random.Range(1, 4).ToString();
+            AudioManager.Instance.PlaySFX(randomWalkSFX);
             transform.DOMove(targetPos, duration)
                 .SetEase(Ease.Linear) // 线性移动最适合格子游戏
                 .OnComplete(() => {
@@ -216,6 +222,8 @@ namespace Game.Core
             isPraying = true;
             // 保持祈祷姿势 0.5 秒 (或者等待动画播放完毕)
             yield return new WaitForSeconds(0.5f);
+            String randomPraySFX = "Pushing" + Random.Range(1, 3).ToString();
+            AudioManager.Instance.PlaySFX(randomPraySFX);
             Vector2Int dirVec = DirectionToVector2Int(direction);
             int targetX = gridCoordinates.x + dirVec.x;
             int targetY = gridCoordinates.y + dirVec.y;

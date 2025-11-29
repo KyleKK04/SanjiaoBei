@@ -11,6 +11,8 @@ namespace Game.Core
     public class DialogueManager : Singleton<DialogueManager>
     {
         private const string PANEL_NAME = "Dialog";
+        public Sprite angel;
+        public Sprite devil;
 
         /// <summary>
         /// 发起对话（支持单句或多句）
