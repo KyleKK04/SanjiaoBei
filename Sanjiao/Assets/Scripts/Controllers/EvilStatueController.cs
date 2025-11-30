@@ -127,6 +127,8 @@ namespace Game.Data
             Debug.Log("Evil Statue Destroyed!");
             isDestroyed = true;
             isBlockingMovement = false; // 摧毁后不再阻挡移动
+            //移除gameObject
+            Destroy(this.gameObject);
             // RemoveFromGrid(); // 可以选择保留尸体（isDestroyed状态），也可以直接移除
         }
 

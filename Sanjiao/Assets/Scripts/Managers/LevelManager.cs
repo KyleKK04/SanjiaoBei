@@ -414,27 +414,49 @@ namespace Game.Core
 
             if (obj.gridObjectType == GridObjectType.Player)
             {
-                // 检测门
-                if (targetObj != null && targetObj.gridObjectType == GridObjectType.Door &&
-                    !targetObj.isBlockingMovement)
+                // 检测是否踩到了门
+                if (targetObj != null && targetObj is DoorController door)
                 {
-                    DoorController door = targetObj as DoorController;
-                    if (door != null)
+                    // 1. 终点门检测
+                    if (door.doorType == DoorType.EndDoor && door.IsPowered)
                     {
-                        if (door.doorType == DoorType.EndDoor)
-                        {
-                            Debug.Log("Player entered End Door -> Normal Win");
-                            GameManager.Instance.WinLevel();
-                        }
-                        // 【新增】第15关真结局检测
-                        else if (door.doorType == DoorType.BeginDoor && GetCurrentLevelIndex() == 14)
-                        {
-                            Debug.Log("Player entered Begin Door -> TRUE ENDING!");
-                            GameManager.Instance.RealWin();
-                        }
+                        Debug.Log("Player entered OPEN End Door!");
+                        StartCoroutine(WinLevelSequence(door));
+                    }
+                    // 2. 第15关真结局起点门检测
+                    else if (door.doorType == DoorType.BeginDoor && GetCurrentLevelIndex() == 14)
+                    {
+                        Debug.Log("Player entered Begin Door -> TRUE ENDING!");
+                        GameManager.Instance.RealWin();
                     }
                 }
             }
+        }
+        
+        // 【新增】过关流程协程
+        IEnumerator WinLevelSequence(DoorController door)
+        {
+            // 1. 播放对话
+            door.TriggerWinSequence();
+
+            // 2. 等待对话结束
+            // 这里的逻辑是：ShowDialog 会把 TimeScale 设为 0
+            // 我们等待一帧，确保 TimeScale 已经被改了
+            yield return null; 
+
+            // 如果确实进入了对话模式 (TimeScale == 0)，则等待它恢复
+            if (Time.timeScale == 0)
+            {
+                // 等待直到 TimeScale 恢复为 1 (对话关闭)
+                // 这里不能用 WaitForSeconds，因为时间停了，用 while 循环检测
+                while (Time.timeScale == 0)
+                {
+                    yield return null; // 等待下一帧 (unscaled)
+                }
+            }
+
+            // 3. 对话结束，执行过关
+            GameManager.Instance.WinLevel();
         }
 
         private List<GameObject> activeChantEffects = new List<GameObject>();
@@ -751,57 +773,57 @@ namespace Game.Core
             DialogueLine line26 = new DialogueLine();
             line26.Content = "（冲在面前）对不起…（跪下）这是我的请求。";
             line26.CharacterSprite = DialogueManager.Instance.devil;
-            level5Dialog1.Add(line26);
+            level15Dialog1.Add(line26);
 
             DialogueLine line27 = new DialogueLine();
             line27.Content = "能请你，绝对自私的，在最后一刻，为自己活一次吗？";
             line27.CharacterSprite = DialogueManager.Instance.devil;
-            level5Dialog1.Add(line27);
+            level15Dialog1.Add(line27);
 
             DialogueLine line28 = new DialogueLine();
             line28.Content = "（自责地低下头）";
             line28.CharacterSprite = DialogueManager.Instance.angel;
-            level5Dialog1.Add(line28);
+            level15Dialog1.Add(line28);
 
             DialogueLine line29= new DialogueLine();
             line29.Content = "（是啊，为什么我现在才真正明白…）";
             line29.CharacterSprite = DialogueManager.Instance.angel;
-            level5Dialog1.Add(line29);
+            level15Dialog1.Add(line29);
 
             DialogueLine line30 = new DialogueLine();
             line30.Content = "（走在错误的道路上自欺欺人，即使披荆斩棘…）";
             line30.CharacterSprite = DialogueManager.Instance.angel;
-            level5Dialog1.Add(line30);
+            level15Dialog1.Add(line30);
 
             DialogueLine line31 = new DialogueLine();
             line31.Content = "（到最后，没有神，没有救赎，没有所谓的审判…）";
             line31.CharacterSprite = DialogueManager.Instance.angel;
-            level5Dialog1.Add(line31);
+            level15Dialog1.Add(line31);
 
             DialogueLine line32 = new DialogueLine();
             line32.Content = "（其实我所拥有的，从始至终只有一个选择。）";
             line32.CharacterSprite = DialogueManager.Instance.angel;
-            level5Dialog1.Add(line32);
+            level15Dialog1.Add(line32);
 
             DialogueLine line33 = new DialogueLine();
             line33.Content = "其实…我也有一个请求。";
             line33.CharacterSprite = DialogueManager.Instance.angel;
-            level5Dialog1.Add(line33);
+            level15Dialog1.Add(line33);
 
             DialogueLine line34 = new DialogueLine();
             line34.Content = "最后一次…让我为自己再战斗最后一次，可以吗？";
             line34.CharacterSprite = DialogueManager.Instance.angel;
-            level5Dialog1.Add(line34);
+            level15Dialog1.Add(line34);
 
             DialogueLine line35 = new DialogueLine();
             line35.Content = "…（抬起头）";
             line35.CharacterSprite = DialogueManager.Instance.devil;
-            level5Dialog1.Add(line35);
+            level15Dialog1.Add(line35);
 
             DialogueLine line36 = new DialogueLine();
             line36.Content = "（笑）嗯。";
             line36.CharacterSprite = DialogueManager.Instance.devil;
-            level5Dialog1.Add(line36);
+            level15Dialog1.Add(line36);
         }
 
         public void OpenBeginDoor()

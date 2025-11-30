@@ -67,14 +67,20 @@ namespace Game.Core
         /// </summary>
         public void PlayBGM(string name)
         {
+            
+            
             if (soundDict.TryGetValue(name, out SoundData sound))
             {
                 // 如果已经在播放这首，就不重置
                 if (bgmSource.clip == sound.clip && bgmSource.isPlaying) return;
 
-                bgmSource.clip = sound.clip;
+                float currentBGMVolume = bgmSource.volume;
+                bgmSource.DOKill();
+                
+                bgmSource.clip = sound.clip; 
                 bgmSource.volume = sound.volume;
                 bgmSource.loop = true;
+                
                 bgmSource.Play();
             }
             else

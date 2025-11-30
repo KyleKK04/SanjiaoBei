@@ -48,7 +48,7 @@ namespace Game.Data
             base.Init(x, y, dir);
             gridObjectType = GridObjectType.Scroll;
             isBlockingMovement = false; // 允许玩家走上来
-            SetText();
+            currentIndex = LevelManager.Instance.GetCurrentLevelIndex();
         }
 
 
@@ -56,6 +56,7 @@ namespace Game.Data
         // 被 LevelManager 调用
         public void OnCollected()
         {
+            SetText();
             if (!isCollected)
             {
                 isCollected = true;

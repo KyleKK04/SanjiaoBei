@@ -234,7 +234,7 @@ MonoBehaviour:
       x: 4
       y: 2
     type: 3
-    initialFacing: 0
+    initialFacing: 1
     requiredDoorPower: 0
     doorType: 0
   - position:

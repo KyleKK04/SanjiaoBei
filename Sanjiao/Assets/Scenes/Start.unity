@@ -590,16 +590,16 @@ MonoBehaviour:
     volume: 1
   - name: Lobby
     clip: {fileID: 8300000, guid: 5441bdf8392d91e41a01806311b1e302, type: 3}
-    volume: 0.2
+    volume: 0.4
   - name: Piano
     clip: {fileID: 8300000, guid: 920219d448311f14ab40b0ee136f02c6, type: 3}
     volume: 1
   - name: Loading
     clip: {fileID: 8300000, guid: 2efcb09daf741a8468f0169e6d248ec3, type: 3}
-    volume: 0.2
+    volume: 0.4
   - name: BGM
     clip: {fileID: 8300000, guid: e01dd422712ac3842adbe6bff72b85c0, type: 3}
-    volume: 0.2
+    volume: 0.4
   - name: Pushing1
     clip: {fileID: 8300000, guid: 016754ff8e9850b46aee7f0ce2b6a38b, type: 3}
     volume: 1
@@ -629,6 +629,9 @@ MonoBehaviour:
     volume: 1
   - name: PickScroll
     clip: {fileID: 8300000, guid: 17ca703938b622542808db26218f1f27, type: 3}
+    volume: 1
+  - name: End
+    clip: {fileID: 8300000, guid: 920219d448311f14ab40b0ee136f02c6, type: 3}
     volume: 1
 --- !u!4 &458715728
 Transform:
@@ -999,6 +1002,11 @@ MonoBehaviour:
   level1Dialog1: []
   level1Dialog2: []
   level1Dialog3: []
+  level2Dialog1: []
+  level5Dialog1: []
+  level6Dialog1: []
+  level13Dialog1: []
+  level15Dialog1: []
   playerInstance: {fileID: 0}
 --- !u!1 &2069491636
 GameObject:
@@ -1041,6 +1049,8 @@ MonoBehaviour:
     UIPanelPrefab: {fileID: 5057064031072666670, guid: fcefa357ffede00429b8351de0716981, type: 3}
   - UIPanelName: Switch
     UIPanelPrefab: {fileID: 1063983688657774673, guid: 9cc7c035ed6c7814985e978b9c5cacf4, type: 3}
+  - UIPanelName: End
+    UIPanelPrefab: {fileID: 4962874032933041020, guid: 906f467f07c6bf649a035e8b22e69fca, type: 3}
 --- !u!4 &2069491638
 Transform:
   m_ObjectHideFlags: 0

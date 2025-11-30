@@ -11,7 +11,7 @@ namespace Game.Data
     {
         public int requiredPower = 3;
         public DoorType doorType = DoorType.EndDoor; // 【新增】
-        private bool isPowered = false;
+        public bool IsPowered { get; private set; } = false;
         public List<SpriteRenderer> doorSprites;
         public List<Sprite> nubmerSprites; // 用于显示数字的Sprite列表
         public Sprite openSprite;
@@ -70,76 +70,104 @@ namespace Game.Data
 
         public override void OnChant(int powerLevel, Direction inputDir)
         {
-            // 【修改】只有终点门才响应咏唱充能
             if (doorType == DoorType.EndDoor)
             {
-                if (GameManager.Instance.HasScroll && powerLevel >= requiredPower)
+                // 如果已经激活了就不再重复激活
+                if (!IsPowered && GameManager.Instance.HasScroll && powerLevel >= requiredPower)
                 {
-                    isPowered = true;
-                    AudioManager.Instance.PlaySFX("GateActive");
-                    Debug.Log("End Door Powered Up!");
+                    OnChantAsync();
                 }
             }
             else
             {
-                // 起点门只是单纯的阻挡咏唱，不发生逻辑
                 Debug.Log("Chant hit Begin Door (Blocked).");
             }
         }
 
-        public override void Interact()
+        public async void OnChantAsync()
         {
-            // 【修改】只有终点门可以交互
-            if (doorType == DoorType.EndDoor)
+            IsPowered = true;
+            isBlockingMovement = false; // 激活后允许玩家走上去
+
+            AudioManager.Instance.PlaySFX("GateActive");
+            Debug.Log("End Door Powered Up!");
+
+            float animDuration = 0.5f; // 动画时长
+
+            // 1. 处理数字 (如果有) -> 淡出消失
+            if (doorSprites.Count >= 2 && doorSprites[1] != null)
             {
-                if (GameManager.Instance.HasScroll && isPowered)
-                {
-                    //使Door缓慢透明并消失并不再BlockMovement
-                    foreach (SpriteRenderer sprite in doorSprites)
-                    {
-                        sprite.DOFade(0, 0.5f);
-                    }
-                    
-                    ShowDialog();
-                    
-                    DOVirtual.DelayedCall(1f, () =>
-                    {
-                        isBlockingMovement = false;
-                        doorSprites[0].sprite = openSprite;
-                        doorSprites[0].DOFade(0.7f, 0.01f);
-                        
-                        if (LevelManager.Instance.GetCurrentLevelIndex() == 14) 
-                        {
-                            LevelManager.Instance.OpenBeginDoor();
-                        }
-                    });
-                }
-                else
-                {
-                    Debug.Log($"Door Locked. Scroll:{GameManager.Instance.HasScroll}, Powered:{isPowered}");
-                }
+                doorSprites[1].DOKill();
+                doorSprites[1].DOFade(0f, animDuration);
             }
-            else
+
+            // 2. 处理主门图片 -> 淡出 -> 换图 -> 淡入
+            if (doorSprites.Count >= 1 && doorSprites[0] != null)
             {
-                // 起点门无法交互
-                Debug.Log("This is the entrance (Begin Door), cannot interact.");
+                SpriteRenderer mainDoor = doorSprites[0];
+                mainDoor.DOKill();
+
+                // 2.1 淡出
+                await mainDoor.DOFade(0f, animDuration).AsyncWaitForCompletion();
+
+                // 2.2 切换图片
+                mainDoor.sprite = openSprite;
+
+                // 2.3 淡入 (变回不透明)
+                // 注意：这里我们淡入回 1.0f，如果你希望它有点半透明效果，可以改成 0.7f
+                await mainDoor.DOFade(1f, animDuration).AsyncWaitForCompletion(); 
+            }
+
+            // 3. 第15关特殊逻辑：同时也打开起点门
+            if (LevelManager.Instance.GetCurrentLevelIndex() == 14)
+            {
+                LevelManager.Instance.OpenBeginDoor();
             }
         }
 
-        public void ForceOpen()
+        public void TriggerWinSequence()
         {
-            foreach (SpriteRenderer sprite in doorSprites)
+            // 播放对话
+            ShowDialog();
+            
+            // 对话结束后进入下一关的逻辑是在 LevelManager 里做的吗？
+            // 由于 ShowDialog 是异步的（导致游戏暂停），我们无法在这里直接回调
+            // 建议：ShowDialog 本身不负责跳转，LevelManager 在检测到玩家踩上去后，
+            // 应该启动一个协程：ShowDialog -> Wait -> WinLevel
+        }
+        
+        public async void ForceOpen()
+        {
+            // 强制开启（用于第15关起点门）
+            isBlockingMovement = false;
+            float animDuration = 0.5f;
+
+            Debug.Log("Door Force Opening...");
+
+            // 1. 处理数字 (如果有) -> 淡出
+            if (doorSprites.Count >= 2 && doorSprites[1] != null)
             {
-                sprite.DOFade(0, 0.5f);
+                doorSprites[1].DOKill();
+                doorSprites[1].DOFade(0f, animDuration);
+            }
+
+            // 2. 处理主门 -> 淡出 -> 换图 -> 淡入
+            if (doorSprites.Count >= 1 && doorSprites[0] != null)
+            {
+                SpriteRenderer mainDoor = doorSprites[0];
+                mainDoor.DOKill();
+
+                // 2.1 淡出
+                await mainDoor.DOFade(0f, animDuration).AsyncWaitForCompletion();
+
+                // 2.2 切换图片
+                mainDoor.sprite = openSprite;
+
+                // 2.3 淡入
+                await mainDoor.DOFade(1f, animDuration).AsyncWaitForCompletion();
             }
             
-            DOVirtual.DelayedCall(1f, () =>
-            {
-                isBlockingMovement = false;
-                doorSprites[0].sprite = openSprite;
-                doorSprites[0].DOFade(0.7f, 0.01f);
-                Debug.Log("Door Force Opened!");
-            });
+            Debug.Log("Door Force Opened Completed!");
         }
         
         private void SetText()
