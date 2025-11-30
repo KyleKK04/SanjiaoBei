@@ -79,13 +79,19 @@ namespace Game.Core
             {
                 cameraOffsetY = 1f;
             }
-
-            if (index == 1)
+            else if (index == 0)
             {
                 cameraOffsetY = 0f;
             }
+            else if (index == 11)
+            {
+                cameraOffsetY = 2f;
+            }
+            else
+            {
+                cameraOffsetY = 1.8f;
+            }
 
-            cameraOffsetY = 1.8f;
             // 生成完关卡后，调整相机和背景
             CenterCameraAndBackground();
             await Task.Delay(2500); // 等待切换面板动画

@@ -1,0 +1,105 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Prefabs
+  m_EditorClassIdentifier: 
+  m_GroupName: Prefabs
+  m_Data:
+    m_SerializedData: []
+  m_GUID: dc34150d0d767434e84322c71b7d95ba
+  m_SerializeEntries:
+  - m_GUID: 11b7e3ebbaea2fc46b709aa6312ba417
+    m_Address: Assets/Prefabs/UI/InGamePanel.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2ce1a3a989894594fa214a9b04b7e218
+    m_Address: Assets/Prefabs/InMap/Scroll.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3abaae9bb3935a14fa11926019c70999
+    m_Address: Assets/Prefabs/UI/SelectionButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 42bb3b5c475210a4e984d9627f6dc36c
+    m_Address: Assets/Prefabs/UI/StartPanel.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4c6461c8d9ae25f46863b042a50f763d
+    m_Address: Assets/Prefabs/InMap/Door.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5fc871ed775085b4aa939d3fd436e349
+    m_Address: Assets/Prefabs/UI/SelectionPanel.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 64dc640cc44a76844a7c5a30cabd238e
+    m_Address: Assets/Prefabs/InMap/EvilStatue.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9cc7c035ed6c7814985e978b9c5cacf4
+    m_Address: Assets/Prefabs/UI/SwitchPanel.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aaa7b10778150b3428e8d6a4cc74b881
+    m_Address: Assets/Prefabs/InMap/Background.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b7ec05bc60169e04f903472265aab0fd
+    m_Address: Assets/Prefabs/InMap/Chant.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ce225f1df14b4f744b89bf85d2043f16
+    m_Address: Assets/Prefabs/InMap/Ground.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e6ef966d7d083894ea673e6a09d45920
+    m_Address: Assets/Prefabs/InMap/Wall.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e8864b5119a75764c99d78a772ecb090
+    m_Address: Assets/Prefabs/InMap/Obstacle.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f489480a4ac3efa4abbececed5d64164
+    m_Address: Assets/Prefabs/InMap/Player.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f51d7801a20880740bef12f97ca46c4b
+    m_Address: Assets/Prefabs/InMap/Statue.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fcefa357ffede00429b8351de0716981
+    m_Address: Assets/Prefabs/UI/DialogPanel.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 6a3c79673ca890d41ab13838a4bbbca6, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: f3bcbd8ad5599bd478c5706ba51e121e, type: 2}
+    - {fileID: 11400000, guid: 3db4d97e6717ef54fbb13deb4ba983ff, type: 2}
