@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using UnityEngine;
 using Game.Core;
 
@@ -5,23 +6,21 @@ namespace Game.Data
 {
     public class EvilStatueController : GridObject
     {
-        [Header("Sprites")]
-        public Sprite UpSripte;
+        [Header("Sprites")] public Sprite UpSripte;
         public Sprite DownSprite;
         public Sprite LeftSprite;
         public Sprite RightSprite;
         public Sprite DestroyedSprite;
-        
-        [Header("Spotted Sprites")]
-        public Sprite SpottedUpSprite;
+
+        [Header("Spotted Sprites")] public Sprite SpottedUpSprite;
         public Sprite SpottedDownSprite;
         public Sprite SpottedLeftSprite;
         public Sprite SpottedRightSprite;
-        
+
         private bool isDestroyed = false;
         private bool isSpottingPlayer = false; // 当前帧是否看到玩家（用于控制Sprite）
-        private bool hasTriggered = false;     // 【新增】是否已经触发过GameOver（用于逻辑锁）
-        
+        private bool hasTriggered = false; // 【新增】是否已经触发过GameOver（用于逻辑锁）
+
         private SpriteRenderer spriteRenderer;
 
         public override void Init(int x, int y, Direction dir)
@@ -30,7 +29,7 @@ namespace Game.Data
             gridObjectType = GridObjectType.GhostStatue;
             isBlockingMovement = true;
             this.spriteRenderer = this.GetComponent<SpriteRenderer>();
-            
+
             // 初始化状态
             hasTriggered = false;
             isDestroyed = false;
@@ -40,7 +39,7 @@ namespace Game.Data
         private void Update()
         {
             // 如果已经销毁，或者已经触发了GameOver，就不要再检测了
-            if (hasTriggered || isDestroyed) 
+            if (hasTriggered || isDestroyed)
             {
                 // 即使停止检测，也要保持动画状态更新（确保显示红色的发现状态）
                 UpdateAnimation();
@@ -51,7 +50,7 @@ namespace Game.Data
             {
                 CheckKillPlayer();
             }
-            
+
             UpdateAnimation();
         }
 
@@ -78,7 +77,7 @@ namespace Game.Data
             if (detected)
             {
                 isSpottingPlayer = true;
-                
+
                 // 【核心修复】加锁，只执行一次
                 if (!hasTriggered)
                 {
@@ -93,9 +92,14 @@ namespace Game.Data
                 isSpottingPlayer = false;
             }
         }
-        
+
         public void KillPlayer()
         {
+            // 【新增】找到玩家并禁用输入
+            if (LevelManager.Instance.playerInstance != null)
+            {
+                LevelManager.Instance.playerInstance.canMove = false;
+            }
             AudioManager.Instance.PlaySFX("Fail");
             GameManager.Instance.GameOver();
         }
@@ -107,15 +111,23 @@ namespace Game.Data
 
             if (powerLevel >= 3)
             {
-                Debug.Log("Evil Statue Destroyed!");
-                isDestroyed = true;
-                isBlockingMovement = false; // 摧毁后不再阻挡移动
-                // RemoveFromGrid(); // 可以选择保留尸体（isDestroyed状态），也可以直接移除
+                HandleDestroy();
             }
             else
             {
                 Debug.Log("Evil Statue blocked weak chant.");
             }
+        }
+
+        private async void HandleDestroy()
+        {
+            AudioManager.Instance.PlaySFX("Destroy");
+            //延迟1秒再执行摧毁逻辑，给音效留出时间
+            await Task.Delay(500);
+            Debug.Log("Evil Statue Destroyed!");
+            isDestroyed = true;
+            isBlockingMovement = false; // 摧毁后不再阻挡移动
+            // RemoveFromGrid(); // 可以选择保留尸体（isDestroyed状态），也可以直接移除
         }
 
         public void UpdateAnimation()

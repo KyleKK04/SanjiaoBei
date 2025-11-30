@@ -47,6 +47,7 @@ namespace Game.Data
 
                 // 3. 转换并更新方向
                 this.direction = Vector2IntToDirection(lookVec);
+                UpdateAnimation();
                 
                 Debug.Log($"雕像转向了玩家，方向变更为: {this.direction}");
             }

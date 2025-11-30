@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using Game.Data;
+using Unity.VisualScripting;
 
 namespace Game.Core
 {
@@ -29,14 +30,15 @@ namespace Game.Core
         [Header("Background Settings")] public GameObject backgroundPrefab; // 背景预制体
         public List<Sprite> backgroundSprites = new List<Sprite>();
         private GameObject currentBackgroundInstance; // 【新增】当前场景中的背景实例引用
-        
+
         private List<StatueController> activeStatues = new List<StatueController>();
 
 
         [Header("Settings")] public float cellSize = 1f;
         public float cameraOffsetY = 3f;
 
-        [Header("Text Settings")] public List<DialogueLine> level1Dialog1 = new List<DialogueLine>();
+        [Header("Text Settings")] private bool isShowedText = false;
+        public List<DialogueLine> level1Dialog1 = new List<DialogueLine>();
         public List<DialogueLine> level1Dialog2 = new List<DialogueLine>();
         public List<DialogueLine> level1Dialog3 = new List<DialogueLine>();
 
@@ -58,6 +60,8 @@ namespace Game.Core
 
         public async void LoadLevel(int index)
         {
+            AudioManager.Instance.StopBGM();
+            AudioManager.Instance.PlaySFX("Loading");
             await UIManager.Instance?.SwitchPanelAsync("Select", "Switch");
             if (index < 0 || index >= levels.Count)
             {
@@ -71,18 +75,24 @@ namespace Game.Core
             currentLevelData = levels[index];
 
             GenerateLevel();
-            if (index == 1)
+            if (index == 2 || index == 3 || index == 4 || index == 5 || index == 1)
             {
                 cameraOffsetY = 1f;
             }
 
+            if (index == 1)
+            {
+                cameraOffsetY = 0f;
+            }
+
+            cameraOffsetY = 1.8f;
             // 生成完关卡后，调整相机和背景
             CenterCameraAndBackground();
+            await Task.Delay(2500); // 等待切换面板动画
+            AudioManager.Instance.StopSFX();
+            await UIManager.Instance?.SwitchPanelAsync("Switch", "InGame");
             AudioManager.Instance.PlayBGM("BGM");
-            await Task.Delay(1200); // 等待切换面板动画
-            await UIManager.Instance?.ClosePanelAsync("Switch");
             ShowDialog();
-            Debug.Log($"LevelManager: Loaded Level {index}");
         }
 
         public void LoadNextLevel()
@@ -291,8 +301,6 @@ namespace Game.Core
                 // 假设物体在 Z=0，背景应该在 Z=10 (更远) 或者 Z=0 但 SortingLayer 很低
                 currentBackgroundInstance.transform.position = new Vector3(centerX, targetCamY, 10f);
             }
-
-            cameraOffsetY = 0f;
         }
 
         // ... (以下辅助方法保持不变) ...
@@ -390,11 +398,25 @@ namespace Game.Core
 
             if (obj.gridObjectType == GridObjectType.Player)
             {
+                // 检测门
                 if (targetObj != null && targetObj.gridObjectType == GridObjectType.Door &&
                     !targetObj.isBlockingMovement)
                 {
-                    Debug.Log("Player entered the door!");
-                    GameManager.Instance.WinLevel();
+                    DoorController door = targetObj as DoorController;
+                    if (door != null)
+                    {
+                        if (door.doorType == DoorType.EndDoor)
+                        {
+                            Debug.Log("Player entered End Door -> Normal Win");
+                            GameManager.Instance.WinLevel();
+                        }
+                        // 【新增】第15关真结局检测
+                        else if (door.doorType == DoorType.BeginDoor && GetCurrentLevelIndex() == 14)
+                        {
+                            Debug.Log("Player entered Begin Door -> TRUE ENDING!");
+                            GameManager.Instance.RealWin();
+                        }
+                    }
                 }
             }
         }
@@ -416,6 +438,7 @@ namespace Game.Core
             {
                 if (effect != null) Destroy(effect);
             }
+
             activeChantEffects.Clear();
 
             // 2. 【新增】重置所有发光的雕像
@@ -423,6 +446,7 @@ namespace Game.Core
             {
                 if (statue != null) statue.ResetChantState();
             }
+
             activeStatues.Clear(); // 清空列表
 
             if (stopSound)
@@ -542,59 +566,81 @@ namespace Game.Core
                 Debug.Log("是第一关");
                 DialogueManager.Instance.ShowDialogue(level1Dialog1);
             }
+
+            isShowedText = true;
         }
-        
+
         public void ClearAllText()
         {
-            
         }
-        
+
         public void SetText()
         {
             DialogueLine line1 = new DialogueLine();
             line1.Content = "…嗯…这里…是哪？";
             line1.CharacterSprite = DialogueManager.Instance.angel;
             level1Dialog1.Add(line1);
-            
+
             DialogueLine line2 = new DialogueLine();
             line2.Content = "等等，这里是教堂？";
             line2.CharacterSprite = DialogueManager.Instance.angel;
             level1Dialog1.Add(line2);
-            
+
             DialogueLine line3 = new DialogueLine();
             line3.Content = "天哪，天哪…我知道的…即使这是一场梦，神也的确眷顾着我。阿门……";
             line3.CharacterSprite = DialogueManager.Instance.angel;
             level1Dialog1.Add(line3);
-            
+
             DialogueLine line4 = new DialogueLine();
             line4.Content = "（你可以使用按键WASD进行移动与转向，且可以使用R键随时重置关卡。）";
             line4.CharacterSprite = null;
             level1Dialog1.Add(line4);
-            
+
             DialogueLine line5 = new DialogueLine();
             line5.Content = "（你获得了神赐予你的力量。你的力量支持你推动单个雕像，但无法推动多个雕像或其它物品）";
             line5.CharacterSprite = null;
             level1Dialog1.Add(line5);
-            
+
             DialogueLine line6 = new DialogueLine();
             line6.Content = "（长按Q键进行咏唱。咏唱的初始等级为1，朝玩家朝向直线传播。）";
             line6.CharacterSprite = null;
             level1Dialog1.Add(line6);
-            
+
             DialogueLine line7 = new DialogueLine();
             line7.Content = "（如果咏唱到达普及者雕像所在位置，则会转向雕像面朝的方向传播并等级+1。）";
             line7.CharacterSprite = null;
             level1Dialog1.Add(line7);
-            
+
             DialogueLine line8 = new DialogueLine();
             line8.Content = "（终点大门荆棘上方显示的数字即为通关所需的最小咏唱等级。）";
             line8.CharacterSprite = null;
             level1Dialog1.Add(line8);
-            
+
             DialogueLine line9 = new DialogueLine();
             line9.Content = "（拾取卷轴后将达到目标等级的咏唱传递至终点大门荆棘处才能摧毁荆棘并开启大门。）";
             line9.CharacterSprite = null;
             level1Dialog1.Add(line9);
+        }
+
+        public void OpenBeginDoor()
+        {
+            // 遍历网格查找
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    GridObject obj = gridMap[x, y];
+                    if (obj != null && obj is DoorController door)
+                    {
+                        if (door.doorType == DoorType.BeginDoor)
+                        {
+                            door.ForceOpen(); // 调用刚才在 DoorController 里写的方法
+                        }
+                    }
+                }
+            }
+
+            Debug.Log("LevelManager: Begin Door has been opened!");
         }
     }
 }

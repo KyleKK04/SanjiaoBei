@@ -16,6 +16,7 @@ public class StartPanel : MonoBehaviour
         startBtn.OnClickAsObservable()
             .Subscribe(async _ =>
             {
+                AudioManager.Instance.PlaySFX("Click");
                 await UIManager.Instance.SwitchPanelAsync("Start", "Select");
             }).AddTo(this);
     }

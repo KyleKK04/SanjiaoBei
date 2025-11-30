@@ -34,10 +34,7 @@ namespace Game.Core
         public async Task GameOver()
         {
             Debug.Log("游戏失败！！！");
-            await UIManager.Instance.OpenPanelAsync("Switch");
-            await Task.Delay(1000);
             LevelManager.Instance.RestartLevel();
-            await UIManager.Instance.ClosePanelAsync("Switch");
         }
 
         public void WinLevel()
@@ -55,8 +52,14 @@ namespace Game.Core
                 
                 // 2. 加载下一关
                 // 如果你想做结算面板，可以在这里暂停，让玩家点“下一关”按钮再加载
+                AudioManager.Instance.StopBGM();
                 LevelManager.Instance.LoadNextLevel();
             }
+        }
+
+        public void RealWin()
+        {
+            
         }
         
         public void UnlockLevel(int levelIndex)

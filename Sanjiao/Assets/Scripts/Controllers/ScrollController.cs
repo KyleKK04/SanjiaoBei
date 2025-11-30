@@ -50,6 +50,7 @@ namespace Game.Data
                 // 1. 隐藏卷轴图片 (不再在场景中显示)
                 var sr = GetComponent<SpriteRenderer>();
                 if (sr != null) sr.enabled = false;
+                AudioManager.Instance.PlaySFX("PickScroll");
                 ShowDialog();                
                 
             }

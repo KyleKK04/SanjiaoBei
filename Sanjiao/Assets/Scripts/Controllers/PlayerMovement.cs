@@ -23,6 +23,7 @@ namespace Game.Core
         private bool isMoving = false;
         private bool isPraying = false;
         private bool isPushing = false;
+        public bool canMove = true;
         [SerializeField]
         private bool isChanting = false;
         private Vector3 targetPosition;
@@ -55,6 +56,7 @@ namespace Game.Core
         {
             isBlockingMovement = true;
             gridObjectType = GridObjectType.Player;
+            canMove = true;
         }
 
         public override void Init(int x, int y, Direction dir)
@@ -98,6 +100,11 @@ namespace Game.Core
                     return;
                 }
 
+                if(!canMove || UIManager.Instance.IsBusy)
+                {
+                    return;
+                }
+                
                 // --- 新增：推箱子预判逻辑 ---
                 // 在请求移动前，先看看前方是不是雕像
                 Vector2Int dirVec = DirectionToVector2Int(inputDir.Value);
@@ -222,7 +229,7 @@ namespace Game.Core
             isPraying = true;
             // 保持祈祷姿势 0.5 秒 (或者等待动画播放完毕)
             yield return new WaitForSeconds(0.5f);
-            String randomPraySFX = "Pushing" + Random.Range(1, 3).ToString();
+            String randomPraySFX = "Praying" + Random.Range(1, 3).ToString();
             AudioManager.Instance.PlaySFX(randomPraySFX);
             Vector2Int dirVec = DirectionToVector2Int(direction);
             int targetX = gridCoordinates.x + dirVec.x;

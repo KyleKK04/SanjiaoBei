@@ -31,6 +31,7 @@ namespace Game.Visual
             exitButton.OnClickAsObservable()
                 .Subscribe(async _ =>
                 {
+                   AudioManager.Instance.PlaySFX("Click");
                    await UIManager.Instance?.SwitchPanelAsync("Select", "Start");
                 }).AddTo(this);
         }
@@ -87,6 +88,7 @@ namespace Game.Visual
                     btnComp.OnClickAsObservable()
                         .Subscribe(async _ =>
                         {
+                            AudioManager.Instance.PlaySFX("Click");
                             LevelManager.Instance.LoadLevel(levelIndex);
                         })
                         .AddTo(this);

@@ -62,6 +62,7 @@ namespace Game.Data
                 if (GameManager.Instance.HasScroll && powerLevel >= requiredPower)
                 {
                     isPowered = true;
+                    AudioManager.Instance.PlaySFX("GateActive");
                     Debug.Log("End Door Powered Up!");
                 }
             }
@@ -91,8 +92,12 @@ namespace Game.Data
                     {
                         isBlockingMovement = false;
                         doorSprites[0].sprite = openSprite;
-                        doorSprites[0].DOFade(0.5f, 0.01f);
-                        Debug.Log("End Door Unlocked and Opened!");
+                        doorSprites[0].DOFade(0.7f, 0.01f);
+                        
+                        if (LevelManager.Instance.GetCurrentLevelIndex() == 14) 
+                        {
+                            LevelManager.Instance.OpenBeginDoor();
+                        }
                     });
                 }
                 else
@@ -107,6 +112,22 @@ namespace Game.Data
             }
         }
 
+        public void ForceOpen()
+        {
+            foreach (SpriteRenderer sprite in doorSprites)
+            {
+                sprite.DOFade(0, 0.5f);
+            }
+            
+            DOVirtual.DelayedCall(1f, () =>
+            {
+                isBlockingMovement = false;
+                doorSprites[0].sprite = openSprite;
+                doorSprites[0].DOFade(0.7f, 0.01f);
+                Debug.Log("Door Force Opened!");
+            });
+        }
+        
         private void SetText()
         {
             DialogueLine line1 = new DialogueLine();
