@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -41,6 +41,16 @@ namespace Game.Core
         public List<DialogueLine> level1Dialog1 = new List<DialogueLine>();
         public List<DialogueLine> level1Dialog2 = new List<DialogueLine>();
         public List<DialogueLine> level1Dialog3 = new List<DialogueLine>();
+
+        public List<DialogueLine> level2Dialog1 = new List<DialogueLine>();
+
+        public List<DialogueLine> level5Dialog1 = new List<DialogueLine>();
+        public List<DialogueLine> level6Dialog1 = new List<DialogueLine>();
+
+        public List<DialogueLine> level13Dialog1 = new List<DialogueLine>();
+
+        public List<DialogueLine> level15Dialog1 = new List<DialogueLine>();
+
 
         private GridObject[,] gridMap;
         private int width;
@@ -566,6 +576,32 @@ namespace Game.Core
                 Debug.Log("是第一关");
                 DialogueManager.Instance.ShowDialogue(level1Dialog1);
             }
+            if (currentLevelIndex == 1)
+            {
+
+                DialogueManager.Instance.ShowDialogue(level2Dialog1);
+            }
+
+            if (currentLevelIndex == 4)
+            {
+
+                DialogueManager.Instance.ShowDialogue(level5Dialog1);
+            }
+            if (currentLevelIndex == 5)
+            {
+
+                DialogueManager.Instance.ShowDialogue(level6Dialog1);
+            }
+            if (currentLevelIndex == 12)
+            {
+
+                DialogueManager.Instance.ShowDialogue(level13Dialog1);
+            }
+            if (currentLevelIndex == 14)
+            {
+
+                DialogueManager.Instance.ShowDialogue(level15Dialog1);
+            }
 
             isShowedText = true;
         }
@@ -575,7 +611,7 @@ namespace Game.Core
         }
 
         public void SetText()
-        {
+        {   //1
             DialogueLine line1 = new DialogueLine();
             line1.Content = "…嗯…这里…是哪？";
             line1.CharacterSprite = DialogueManager.Instance.angel;
@@ -620,6 +656,146 @@ namespace Game.Core
             line9.Content = "（拾取卷轴后将达到目标等级的咏唱传递至终点大门荆棘处才能摧毁荆棘并开启大门。）";
             line9.CharacterSprite = null;
             level1Dialog1.Add(line9);
+
+            //2
+            DialogueLine line10 = new DialogueLine();
+            line10.Content = "这里的一切，如此飘渺…又如此真实和温暖…";
+            line10.CharacterSprite = DialogueManager.Instance.angel;
+            level2Dialog1.Add(line10);
+
+            DialogueLine line11 = new DialogueLine();
+            line11.Content = "主啊，你正温柔地注视着虔诚的信徒们吗？";
+            line11.CharacterSprite = DialogueManager.Instance.angel;
+            level2Dialog1.Add(line11);
+
+            //5
+            DialogueLine line12 = new DialogueLine();
+            line12.Content = "Ciallo(∠・ω< )⌒☆！好久不见，想我了吗？";
+            line12.CharacterSprite = DialogueManager.Instance.devil;
+            level5Dialog1.Add(line12);
+
+            DialogueLine line13 = new DialogueLine();
+            line13.Content = "你怎么会出现在这里？！亵渎神明的人根本没有资格在这里逗留！出去！";
+            line13.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line13);
+
+            DialogueLine line14 = new DialogueLine();
+            line14.Content = "虽然你这样说，但是我也出不去啊，别那么古板嘛~再来陪我玩儿玩儿呗~";
+            line14.CharacterSprite = DialogueManager.Instance.devil;
+            level5Dialog1.Add(line14);
+
+            DialogueLine line15 = new DialogueLine();
+            line15.Content = "比起我，接下来你要怎么过去？";
+            line15.CharacterSprite = DialogueManager.Instance.devil;
+            level5Dialog1.Add(line15);
+
+            DialogueLine line16 = new DialogueLine();
+            line16.Content = "（移动到恶鬼雕像四周或被恶鬼雕像看到将直接失败，请一定注意绕开它们！）";
+            line16.CharacterSprite = null;
+            level5Dialog1.Add(line16);
+
+            DialogueLine line17 = new DialogueLine();
+            line17.Content = "（被阻挡住必要的去路时，可以使用高于或等于3级的咏唱摧毁恶鬼雕像。）";
+            line17.CharacterSprite = null;
+            level5Dialog1.Add(line17);
+
+            DialogueLine line18 = new DialogueLine();
+            line18.Content = "（但小于3级的咏唱会被恶鬼雕像阻挡，还请特别注意。）";
+            line18.CharacterSprite = null;
+            level5Dialog1.Add(line18);
+
+            //6
+            DialogueLine line19 = new DialogueLine();
+            line19.Content = "够了，别再跟随我了！";
+            line19.CharacterSprite = DialogueManager.Instance.angel;
+            level6Dialog1.Add(line19);
+
+            DialogueLine line20 = new DialogueLine();
+            line20.Content = "（笑而不语）";
+            line20.CharacterSprite = DialogueManager.Instance.devil;
+            level6Dialog1.Add(line20);
+
+            DialogueLine line21 = new DialogueLine();
+            line21.Content = "这可真是倒霉！罢了，事实上我早已习惯了。";
+            line21.CharacterSprite = DialogueManager.Instance.angel;
+            level6Dialog1.Add(line21);
+
+            DialogueLine line22 = new DialogueLine();
+            line22.Content = "主啊，这也是你降下的考验吗？";
+            line22.CharacterSprite = DialogueManager.Instance.angel;
+            level6Dialog1.Add(line22);
+            
+            //13
+            DialogueLine line23 = new DialogueLine();
+            line23.Content = "（跟了上去）喂！你…";
+            line23.CharacterSprite = DialogueManager.Instance.devil;
+            level13Dialog1.Add(line23);
+
+            DialogueLine line24 = new DialogueLine();
+            line24.Content = "可是我们没有回头路可走了…我们身后总有荆棘不断生发缠绕，我们退无可退。";
+            line24.CharacterSprite = DialogueManager.Instance.angel;
+            level13Dialog1.Add(line24);
+
+            DialogueLine line25 = new DialogueLine();
+            line25.Content = "…";
+            line25.CharacterSprite = DialogueManager.Instance.angel;
+            level13Dialog1.Add(line25);
+
+            //15
+            DialogueLine line26 = new DialogueLine();
+            line26.Content = "（冲在面前）对不起…（跪下）这是我的请求。";
+            line26.CharacterSprite = DialogueManager.Instance.devil;
+            level5Dialog1.Add(line26);
+
+            DialogueLine line27 = new DialogueLine();
+            line27.Content = "能请你，绝对自私的，在最后一刻，为自己活一次吗？";
+            line27.CharacterSprite = DialogueManager.Instance.devil;
+            level5Dialog1.Add(line27);
+
+            DialogueLine line28 = new DialogueLine();
+            line28.Content = "（自责地低下头）";
+            line28.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line28);
+
+            DialogueLine line29= new DialogueLine();
+            line29.Content = "（是啊，为什么我现在才真正明白…）";
+            line29.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line29);
+
+            DialogueLine line30 = new DialogueLine();
+            line30.Content = "（走在错误的道路上自欺欺人，即使披荆斩棘…）";
+            line30.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line30);
+
+            DialogueLine line31 = new DialogueLine();
+            line31.Content = "（到最后，没有神，没有救赎，没有所谓的审判…）";
+            line31.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line31);
+
+            DialogueLine line32 = new DialogueLine();
+            line32.Content = "（其实我所拥有的，从始至终只有一个选择。）";
+            line32.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line32);
+
+            DialogueLine line33 = new DialogueLine();
+            line33.Content = "其实…我也有一个请求。";
+            line33.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line33);
+
+            DialogueLine line34 = new DialogueLine();
+            line34.Content = "最后一次…让我为自己再战斗最后一次，可以吗？";
+            line34.CharacterSprite = DialogueManager.Instance.angel;
+            level5Dialog1.Add(line34);
+
+            DialogueLine line35 = new DialogueLine();
+            line35.Content = "…（抬起头）";
+            line35.CharacterSprite = DialogueManager.Instance.devil;
+            level5Dialog1.Add(line35);
+
+            DialogueLine line36 = new DialogueLine();
+            line36.Content = "（笑）嗯。";
+            line36.CharacterSprite = DialogueManager.Instance.devil;
+            level5Dialog1.Add(line36);
         }
 
         public void OpenBeginDoor()
